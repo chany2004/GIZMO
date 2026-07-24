@@ -1,0 +1,4 @@
+# Project-level environment overrides (Apache/XAMPP)
+# Prefer .env in the project root (see .env.example).
+# Uncomment and set only if you cannot use .env:
+# SetEnv OPENAI_API_KEY "sk-your-real-key-here"

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gizmo Duel — GIZMO</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="trivia.css" />
+    <link rel="stylesheet" href="game.css" />
+    <link rel="stylesheet" href="profile.css" />
+    <link rel="stylesheet" href="lobby.css" />
+    <link rel="stylesheet" href="multiplayer.css" />
+  </head>
+  <body class="play-page">
+    <header class="topbar play-header">
+      <a class="brand" href="index.html"><span class="brand-mark">G</span>GIZMO</a>
+      <a class="back-link" href="index.html">← Back to games</a>
+    </header>
+
+    <main class="game-screen">
+      <!-- Step 1: Setup -->
+      <section class="game-shell duel-start" id="startScreen">
+        <p class="eyebrow center"><span></span> GIZMO DUEL</p>
+        <div class="start-icon" id="startIcon">⚔️</div>
+        <h1 id="startTitle">Ready to battle with your brain?</h1>
+        <p class="game-help">Create a room, share the Room ID with friends, then start when everyone is ready.</p>
+        <label class="player-name">Your player name
+          <input id="playerName" maxlength="24" placeholder="e.g. GizmoPlayer" />
+        </label>
+        <div class="setup-group">
+          <label class="category-label" for="categorySelect">Choose a category</label>
+          <select id="categorySelect" class="category-select" aria-label="Quiz categories">
+            <option value="">Loading categories…</option>
+          </select>
+        </div>
+        <div class="duel-rules">
+          <span>✓ Correct: points</span>
+          <span>🔥 Streak: bonus points</span>
+          <span>🏆 Highest score wins</span>
+        </div>
+        <p class="invite-note" id="inviteNote" aria-live="polite"></p>
+        <button class="button" type="button" id="startGame">Create room <span>→</span></button>
+      </section>
+
+      <!-- Step 2: Lobby — share Room ID before start -->
+      <section class="game-shell duel-lobby hidden" id="lobbyScreen">
+        <p class="eyebrow center"><span></span> ROOM LOBBY</p>
+        <div class="start-icon" id="lobbyIcon">🏆</div>
+        <h1 id="lobbyTitle">Room created!</h1>
+        <p class="game-help" id="lobbyHelp">Share this Room ID so friends can join before you start.</p>
+
+        <div class="room-id-card">
+          <small>ROOM ID</small>
+          <strong id="lobbyRoomCode">------</strong>
+          <div class="room-id-actions">
+            <button type="button" class="invite-button" id="copyRoomCode">Copy ID</button>
+            <button type="button" class="invite-button secondary" id="copyRoomLink">Copy link</button>
+          </div>
+        </div>
+
+        <div class="lobby-meta">
+          <span id="lobbyCategory">World Trivia</span>
+          <span id="lobbyPlayerCount">1 player waiting</span>
+        </div>
+
+        <ul class="lobby-players" id="lobbyPlayerList" aria-label="Players in room"></ul>
+        <p class="invite-note" id="lobbyNote" aria-live="polite"></p>
+
+        <button class="button" type="button" id="beginGame">Start game <span>→</span></button>
+        <button class="button light-button hidden" type="button" id="waitForHost" disabled>Waiting for host…</button>
+      </section>
+
+      <!-- Step 3: Live game -->
+      <section class="game-shell duel-shell hidden" id="quizScreen">
+        <div class="game-top">
+          <span id="gameKind">MULTIPLAYER TRIVIA</span>
+          <strong><span class="timer">⏱ <b id="timer">20</b>s</span> &nbsp; Score: <b id="score">0</b></strong>
+        </div>
+        <section class="room-status">
+          <strong id="roomLabel">Room</strong>
+          <span id="playerCount">1 player</span>
+          <span id="streakBadge">🔥 0 streak</span>
+          <button type="button" class="room-invite" id="copyRoom">Invite</button>
+        </section>
+        <div class="progress-track"><span id="progressBar"></span></div>
+        <p class="question-count" id="questionCount">QUESTION 1 OF 15</p>
+        <h1 id="gameTitle">Loading question...</h1>
+        <p class="game-help" id="gameInstruction">Pick the best answer before time runs out.</p>
+        <div class="trivia-board" id="gameBoard"></div>
+        <p class="answer-note" id="answerNote"></p>
+        <div class="result-actions hidden" id="resultActions">
+          <button class="button" type="button" id="restartGame">Play again <span>↻</span></button>
+          <a class="button light-button" href="index.html">More games</a>
+        </div>
+        <section class="leaderboard hidden" id="leaderboard">
+          <p class="eyebrow center"><span></span> TOP SCORES</p>
+          <h2>High-score board</h2>
+          <ol id="leaderboardList"></ol>
+        </section>
+      </section>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>

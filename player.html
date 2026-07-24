@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Player Profile — Gizmo</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="profile.css">
+</head>
+<body class="dashboard-page">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">G</span>GIZMO</a>
+    <a class="text-button" href="index.html">Home</a>
+  </header>
+  <main class="dashboard">
+    <section class="welcome-panel player-profile-panel">
+      <div class="avatar player-view-avatar" id="avatar">G</div>
+      <div>
+        <p class="eyebrow"><span></span> GIZMO PLAYER</p>
+        <h1 id="name">Loading…</h1>
+        <p id="meta">Trivia player</p>
+      </div>
+      <button class="button hidden" type="button" id="follow">Follow</button>
+    </section>
+  </main>
+  <script>
+    const profileId=new URLSearchParams(location.search).get('id');
+    const me=JSON.parse(localStorage.getItem('gizmoUser')||'null');
+    const nameEl=document.querySelector('#name');
+    const metaEl=document.querySelector('#meta');
+    const avatarEl=document.querySelector('#avatar');
+    const followBtn=document.querySelector('#follow');
+
+    async function profileApi(action,body={}){
+      const r=await fetch('profiles.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})});
+      const d=await r.json();
+      if(!r.ok||d.error)throw new Error(d.error||'Request failed');
+      return d;
+    }
+
+    function showProfile(p){
+      if(!p)return;
+      nameEl.textContent=p.name;
+      metaEl.textContent=`${p.followers} followers · ${p.following} following`;
+      if(p.photo){
+        avatarEl.textContent='';
+        avatarEl.style.backgroundImage=`url('${p.photo}')`;
+        avatarEl.style.backgroundSize='cover';
+        avatarEl.style.backgroundPosition='center';
+      }else{
+        avatarEl.style.backgroundImage='';
+        avatarEl.textContent=p.name.charAt(0).toUpperCase();
+      }
+    }
+
+    async function loadProfile(){
+      const d=await profileApi('get',{id:profileId});
+      showProfile(d.profile);
+      return d.profile;
+    }
+
+    if(!profileId){
+      nameEl.textContent='Profile not found';
+      metaEl.textContent='Missing player id.';
+    }else{
+      loadProfile().then(async p=>{
+        if(!p){nameEl.textContent='Profile not found';return}
+        if(me?.id&&me.id!==profileId){
+          followBtn.classList.remove('hidden');
+          const status=await profileApi('isFollowing',{id:me.id,target:profileId});
+          followBtn.textContent=status.following?'Following':'Follow';
+          followBtn.onclick=async()=>{
+            try{
+              const res=await profileApi('follow',{id:me.id,target:profileId});
+              followBtn.textContent=res.following?'Following':'Follow';
+            }catch(e){alert(e.message)}
+          };
+        }
+        setInterval(()=>loadProfile().catch(()=>{}),8000);
+      }).catch(e=>{
+        nameEl.textContent='Could not load profile';
+        metaEl.textContent=e.message;
+      });
+    }
+  </script>
+</body>
+</html>
