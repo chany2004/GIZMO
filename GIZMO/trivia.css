@@ -1,0 +1,141 @@
+/* GIZMO — Trivia Board & Quiz Game CSS */
+
+.game-panel h2 {
+  font-family: "Baloo 2", sans-serif;
+  font-size: clamp(26px, 4vw, 36px);
+  font-weight: 800;
+  margin-top: 14px;
+  line-height: 1.15;
+  color: #1e1b4b;
+}
+
+.progress-track {
+  height: 9px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  margin: 18px 0 14px;
+  overflow: hidden;
+}
+
+.progress-track span {
+  display: block;
+  width: 20%;
+  height: 100%;
+  background: linear-gradient(90deg, #818cf8 0%, #4f46e5 100%);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.question-count {
+  font-size: 11px !important;
+  letter-spacing: 1.5px;
+  font-weight: 800;
+  color: #6366f1 !important;
+  margin: 0 0 8px 0 !important;
+  text-transform: uppercase;
+}
+
+.trivia-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  text-align: left;
+  margin-top: 18px;
+}
+
+/* TRIVIA ANSWER BUTTONS */
+.answer {
+  min-height: 60px;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 14px 16px;
+  color: #1e293b;
+  font: 700 15px "DM Sans", sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.answer:hover:not(:disabled) {
+  border-color: #6366f1;
+  background: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.12);
+}
+
+.answer:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.answer:disabled {
+  cursor: default;
+}
+
+.answer-letter {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: #e0e7ff;
+  color: #4338ca;
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-right: 12px;
+  transition: all 0.2s ease;
+}
+
+/* Answer States */
+.answer.correct {
+  border-color: #22c55e !important;
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.2) !important;
+}
+
+.answer.correct .answer-letter {
+  background: #22c55e !important;
+  color: #ffffff !important;
+}
+
+.answer.wrong {
+  border-color: #ef4444 !important;
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.2) !important;
+}
+
+.answer.wrong .answer-letter {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.answer-note {
+  min-height: 22px !important;
+  margin: 16px 0 0 !important;
+  color: #64748b !important;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* RESPONSIVE MOBILE TRIVIA BOARD */
+@media (max-width: 640px) {
+  .trivia-board {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .answer {
+    min-height: 54px;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+}

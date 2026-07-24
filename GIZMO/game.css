@@ -1,0 +1,517 @@
+/* GIZMO Duel & Game Studio CSS */
+
+/* PAGE BASE & HEADER */
+.play-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #eee8fd 0%, #e3daf9 100%);
+  color: #1e293b;
+  font-family: "DM Sans", sans-serif;
+}
+
+/* Explicit button reset inside play-page to remove default OS gray buttons */
+.play-page button {
+  font-family: "DM Sans", sans-serif;
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  box-shadow: none;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.play-header {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.back-link {
+  color: #4f46e5;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.2s ease;
+}
+
+.back-link:hover {
+  transform: translateX(-2px);
+  color: #3730a3;
+}
+
+/* GAME SCREEN LAYOUT */
+.game-screen {
+  min-height: calc(100vh - 82px);
+  display: grid;
+  place-items: center;
+  padding: 32px 20px 64px;
+  box-sizing: border-box;
+}
+
+.game-shell {
+  background: #ffffff;
+  width: min(100%, 720px);
+  border: 1px solid rgba(119, 105, 213, 0.15);
+  border-radius: 28px;
+  padding: 42px;
+  box-shadow: 0 24px 48px -12px rgba(67, 56, 202, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.game-shell h1 {
+  font-family: "Baloo 2", sans-serif;
+  font-size: clamp(32px, 4.5vw, 44px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #1e1b4b;
+  margin: 16px auto 10px;
+  max-width: 580px;
+}
+
+.game-help {
+  font-size: 15px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+
+.start-icon {
+  height: 84px;
+  width: 84px;
+  margin: 16px auto;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 42px;
+  box-shadow: 0 10px 24px -4px rgba(245, 158, 11, 0.3);
+}
+
+/* TOP STATUS BAR & TIMER */
+.game-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.game-top #gameKind {
+  background: #e0e7ff;
+  color: #4338ca;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.timer {
+  background: #fef3c7;
+  color: #b45309;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.room-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 18px 0 12px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: #f1eefc;
+  border: 1px solid #e2d9f8;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.room-status strong {
+  color: #4f46e5;
+}
+
+.room-status #streakBadge {
+  color: #ea580c;
+  background: #ffedd5;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.room-invite {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  padding: 6px 14px !important;
+  font: 700 12px 'DM Sans', sans-serif !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.room-invite:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4) !important;
+}
+
+/* BUTTONS DESIGN SYSTEM */
+.play-page .button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border: none !important;
+  border-radius: 16px !important;
+  padding: 16px 28px !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  color: #ffffff !important;
+  font: 800 16px 'DM Sans', sans-serif !important;
+  cursor: pointer !important;
+  box-shadow: 0 10px 24px -4px rgba(79, 70, 229, 0.4) !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+}
+
+.play-page .button:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 14px 30px -4px rgba(79, 70, 229, 0.5) !important;
+}
+
+.play-page .button.light-button {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+
+.play-page .button.light-button:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+/* DUEL SETUP & INPUTS */
+.duel-rules {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 24px;
+}
+
+.duel-rules span {
+  background: #e0e7ff;
+  color: #4338ca;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.player-name, .setup-group {
+  text-align: left;
+  margin-top: 20px;
+}
+
+.player-name {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.category-label {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 800;
+  display: block;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.player-name input {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  margin-top: 8px !important;
+  padding: 14px 16px !important;
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+  font: 600 15px 'DM Sans', sans-serif !important;
+  color: #0f172a !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.player-name input:focus {
+  border-color: #6366f1 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+}
+
+.category-select {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  padding: 14px 16px !important;
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  font: 600 15px 'DM Sans', sans-serif !important;
+  cursor: pointer !important;
+  outline: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 14 10'%3E%3Cpath fill='%234f46e5' d='M1 2l6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 16px center !important;
+  padding-right: 44px !important;
+  transition: all 0.2s ease !important;
+}
+
+.category-select:focus {
+  border-color: #6366f1 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* LOBBY ROOM ID CARD & INVITE BUTTONS */
+.duel-lobby .room-id-card {
+  background: #faf8ff;
+  border: 2px dashed #c4b5fd;
+  border-radius: 22px;
+  padding: 24px 20px;
+  margin: 24px auto 20px;
+  max-width: 380px;
+}
+
+.room-id-card small {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #64748b;
+}
+
+.room-id-card strong {
+  display: block;
+  font: 800 clamp(32px, 8vw, 44px) 'Baloo 2', sans-serif;
+  letter-spacing: 8px;
+  color: #4338ca;
+  margin: 8px 0 18px;
+}
+
+.room-id-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.invite-button {
+  border: none !important;
+  border-radius: 12px !important;
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  padding: 10px 20px !important;
+  font: 700 13px 'DM Sans', sans-serif !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+}
+
+.invite-button:hover {
+  background: #4338ca !important;
+  transform: translateY(-1px) !important;
+}
+
+.invite-button.secondary {
+  background: #ffffff !important;
+  color: #4f46e5 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: none !important;
+}
+
+.invite-button.secondary:hover {
+  background: #f8fafc !important;
+  border-color: #818cf8 !important;
+}
+
+.lobby-meta {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.lobby-meta span {
+  background: #e0e7ff;
+  color: #4338ca;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+
+.lobby-players {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto 24px;
+  max-width: 380px;
+}
+
+.lobby-players li {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin: 8px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.leaderboard {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1.5px solid #f1f5f9;
+}
+
+.leaderboard h2 {
+  font-size: 26px;
+  color: #1e1b4b;
+  margin: 6px 0 16px;
+}
+
+.leaderboard ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  counter-reset: rank;
+}
+
+.leaderboard li {
+  counter-increment: rank;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  margin: 8px 0;
+  padding: 12px 16px;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.leaderboard li:before {
+  content: counter(rank);
+  height: 26px;
+  width: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #e0e7ff;
+  color: #4338ca;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.leaderboard li:first-child:before {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.leaderboard li span {
+  margin-left: auto;
+  color: #4f46e5;
+}
+
+/* MOBILE RESPONSIVE MEDIA QUERIES */
+@media (max-width: 640px) {
+  .game-screen {
+    padding: 16px 12px 40px;
+    min-height: calc(100vh - 71px);
+  }
+
+  .game-shell {
+    padding: 24px 18px;
+    border-radius: 22px;
+  }
+
+  .game-shell h1 {
+    font-size: 28px;
+    margin-top: 12px;
+  }
+
+  .start-icon {
+    height: 70px;
+    width: 70px;
+    font-size: 36px;
+    margin: 12px auto;
+  }
+
+  .room-status {
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .room-status strong, .room-status span {
+    display: inline-block;
+  }
+
+  .room-invite {
+    width: 100% !important;
+    margin-top: 4px;
+  }
+
+  .room-id-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .invite-button {
+    width: 100% !important;
+  }
+
+  .result-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .result-actions .button {
+    width: 100% !important;
+  }
+}
