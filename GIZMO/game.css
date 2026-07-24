@@ -64,6 +64,12 @@
   box-shadow: 0 24px 48px -12px rgba(67, 56, 202, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.9) inset;
   text-align: center;
   box-sizing: border-box;
+  animation: shellFadeIn 0.4s ease-out;
+}
+
+@keyframes shellFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .game-shell h1 {
@@ -121,6 +127,7 @@
   padding: 4px 12px;
   border-radius: 999px;
   font-weight: 800;
+  transition: all 0.3s ease;
 }
 
 .room-status {
@@ -136,6 +143,12 @@
   color: #475569;
   font-size: 13px;
   font-weight: 700;
+  animation: statusFadeIn 0.3s ease-out;
+}
+
+@keyframes statusFadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .room-status strong {
@@ -219,6 +232,12 @@
   padding: 6px 14px;
   font-size: 13px;
   font-weight: 700;
+  animation: rulesFadeIn 0.5s ease-out;
+}
+
+@keyframes rulesFadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .player-name, .setup-group {
@@ -398,10 +417,17 @@
   margin-top: 24px;
 }
 
+/* LEADERBOARD — Enhanced Podium Style */
 .leaderboard {
   margin-top: 36px;
   padding-top: 28px;
   border-top: 1.5px solid #f1f5f9;
+  animation: leaderboardFadeIn 0.5s ease-out;
+}
+
+@keyframes leaderboardFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .leaderboard h2 {
@@ -427,16 +453,35 @@
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   margin: 8px 0;
-  padding: 12px 16px;
+  padding: 14px 18px;
   color: #1e293b;
   font-size: 14px;
   font-weight: 700;
+  transition: all 0.2s ease;
+  animation: leaderRowSlide 0.4s ease-out;
+  animation-fill-mode: both;
+}
+
+.leaderboard li:nth-child(1) { animation-delay: 0.05s; }
+.leaderboard li:nth-child(2) { animation-delay: 0.1s; }
+.leaderboard li:nth-child(3) { animation-delay: 0.15s; }
+.leaderboard li:nth-child(4) { animation-delay: 0.2s; }
+.leaderboard li:nth-child(5) { animation-delay: 0.25s; }
+
+@keyframes leaderRowSlide {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.leaderboard li:hover {
+  background: #f1f5f9;
+  transform: translateX(4px);
 }
 
 .leaderboard li:before {
   content: counter(rank);
-  height: 26px;
-  width: 26px;
+  height: 28px;
+  width: 28px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -444,16 +489,33 @@
   color: #4338ca;
   font-weight: 800;
   font-size: 12px;
+  flex-shrink: 0;
 }
 
+/* Podium Top 3 */
 .leaderboard li:first-child:before {
-  background: #fef3c7;
-  color: #b45309;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  font-size: 14px;
+}
+
+.leaderboard li:nth-child(2):before {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  color: #475569;
+  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+}
+
+.leaderboard li:nth-child(3):before {
+  background: linear-gradient(135deg, #fde68a 0%, #d97706 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
 }
 
 .leaderboard li span {
   margin-left: auto;
   color: #4f46e5;
+  font-size: 15px;
 }
 
 /* MOBILE RESPONSIVE MEDIA QUERIES */

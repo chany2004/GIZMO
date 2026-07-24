@@ -1,21 +1,8 @@
 <?php
 /**
- * GIZMO Helpers — Works on XAMPP AND Vercel
- * - XAMPP: requires config.php from same directory
- * - Vercel: requires api/config.php (because helpers.php is at root, config is at root too)
+ * GIZMO API Helpers — Vercel-compatible
  */
-$configPath = __DIR__ . '/config.php';
-if (!file_exists($configPath)) {
-    // Fallback for Vercel
-    $configPath = __DIR__ . '/api/config.php';
-}
-require_once $configPath;
-
-// AI key detection for chat.php
-$aiKeyPath = __DIR__ . '/data/ai.key';
-if (file_exists($aiKeyPath)) {
-    define('GIZMO_AI_KEY_FILE', $aiKeyPath);
-}
+require_once __DIR__ . '/config.php';
 
 function json_reply(array $data, int $status = 200): void
 {
@@ -139,41 +126,91 @@ function answer_keys(PDO $db, int $categoryId): array
     return $keys;
 }
 
-function gizmo_load_ai_key(): string
+function load_room(PDO $db, string $code): ?array
 {
-    $candidates = [];
+    $stmt = $db->prepare(
+        'SELECT r.*, c.slug AS category_slug
+         FROM rooms r
+         JOIN quiz_categories c ON c.id = r.category_id
+         WHERE r.room_code = ? LIMIT 1'
+    );
+    $stmt->execute([$code]);
+    return $stmt->fetch() ?: null;
+}
 
-    // .env file
-    $envPath = __DIR__ . '/.env';
-    if (file_exists($envPath)) {
-        $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || $line[0] === '#') continue;
-            if (strpos($line, '=') === false) continue;
-            list($k, $v) = explode('=', $line, 2);
-            $k = trim($k);
-            $v = trim($v, " \t\n\r\0\x0B\"'");
-            if (in_array($k, ['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'], true)) {
-                $candidates[] = $v;
-            }
+function load_players(PDO $db, int $roomId): array
+{
+    $stmt = $db->prepare(
+        'SELECT rp.id, rp.user_id, rp.name, rp.score, rp.correct, rp.streak,
+                rp.best_streak AS bestStreak, rp.answered_round AS answeredRound, rp.round,
+                u.photo, u.updated_at
+         FROM room_players rp
+         LEFT JOIN users u ON u.id = rp.user_id
+         WHERE rp.room_id = ? ORDER BY rp.score DESC, rp.correct DESC'
+    );
+    $stmt->execute([$roomId]);
+    $players = [];
+    foreach ($stmt->fetchAll() as $p) {
+        $players[] = [
+            'id'            => $p['id'],
+            'userId'        => $p['user_id'],
+            'name'          => $p['name'],
+            'photo'         => photo_public_url($p['photo'] ?? '', $p['updated_at'] ?? null),
+            'score'         => (int) $p['score'],
+            'correct'       => (int) $p['correct'],
+            'streak'        => (int) $p['streak'],
+            'bestStreak'    => (int) $p['bestStreak'],
+            'answeredRound' => (int) $p['answeredRound'],
+            'round'         => (int) $p['round'],
+        ];
+    }
+    return $players;
+}
+
+function room_state(PDO $db, array $roomRow): array
+{
+    $now = time();
+    $status = $roomRow['status'];
+    $startedAt = $roomRow['started_at'] ? (int) $roomRow['started_at'] : null;
+    $finished = $status === 'finished';
+    $round = 0;
+
+    if ($status === 'started' && $startedAt) {
+        $round = min(14, max(0, intdiv($now - $startedAt, 20)));
+        if ($now - $startedAt >= 300) {
+            $db = gizmo_db();
+            $db->prepare('UPDATE rooms SET status = ? WHERE id = ?')->execute(['finished', $roomRow['id']]);
+            $status = 'finished';
+            $finished = true;
+            $round = 14;
         }
     }
 
-    // Key files
-    foreach ([__DIR__ . '/data/ai.key'] as $kf) {
-        if (is_readable($kf)) $candidates[] = trim((string) file_get_contents($kf));
-    }
+    $players = load_players($db, (int) $roomRow['id']);
 
-    // Environment variables
-    foreach (['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'] as $envK) {
-        $val = trim((string) (getenv($envK) ?: ($_ENV[$envK] ?? '')));
-        if ($val !== '') $candidates[] = $val;
-    }
+    return [
+        'room' => [
+            'code'      => $roomRow['room_code'],
+            'category'  => $roomRow['category_slug'],
+            'hostId'    => $roomRow['host_id'],
+            'status'    => $status,
+            'createdAt' => (int) $roomRow['created_at'],
+            'startedAt' => $startedAt,
+            'players'   => $players,
+        ],
+        'round'    => $round,
+        'finished' => $finished,
+        'serverTime' => $now,
+    ];
+}
 
-    foreach ($candidates as $candidate) {
-        if ($candidate !== '' && !preg_match('/REPLACE|YOUR|changeme|^sk-your/i', $candidate)) return $candidate;
-    }
-    return '';
+function sync_user_stats(PDO $db, string $userId, int $score, int $correct, int $total): void
+{
+    if (!$userId) return;
+    update_streak($db, $userId);
+    $db->prepare(
+        'UPDATE users SET total_score = total_score + ?, total_games = total_games + 1,
+         correct = correct + ?, answers = answers + ? WHERE id = ?'
+    )->execute([$score, $correct, $total, $userId]);
 }
 

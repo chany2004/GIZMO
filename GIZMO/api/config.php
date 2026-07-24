@@ -1,25 +1,23 @@
 <?php
 /**
  * GIZMO — Database Configuration
- * AUTO-DETECTS: XAMPP (local) vs Vercel (serverless)
+ * Works with XAMPP (local) AND Vercel (environment variables)
  * 
- * ✅ Works on XAMPP with MySQL (default)
- * ✅ Works on Vercel with PlanetScale MySQL (env vars)
- * 
- * For Vercel: Set DB_HOST, DB_NAME, DB_USER, DB_PASS in Project Settings
+ * For Vercel: Set these in Project Settings > Environment Variables
+ * For XAMPP: Edit the local defaults below
  */
 
 // Detect if running on Vercel
 $isVercel = !empty($_SERVER['VERCEL']) || !empty(getenv('VERCEL'));
 
 if ($isVercel) {
-    // === VERCEL: Use environment variables from Project Settings ===
+    // === VERCEL: Use environment variables ===
     define('DB_HOST', getenv('DB_HOST') ?: '');
     define('DB_NAME', getenv('DB_NAME') ?: '');
     define('DB_USER', getenv('DB_USER') ?: '');
     define('DB_PASS', getenv('DB_PASS') ?: '');
 } else {
-    // === XAMPP LOCAL: Default XAMPP credentials ===
+    // === XAMPP LOCAL: Default credentials ===
     define('DB_HOST', 'localhost');
     define('DB_NAME', 'GIZMO');
     define('DB_USER', 'root');
@@ -40,9 +38,9 @@ function gizmo_load_ai_key_from_sources(): string
 {
     $candidates = [];
 
-    // .env file
-    if (file_exists(__DIR__ . '/.env')) {
-        $dotenv = file(__DIR__ . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    // .env file (local only)
+    if (file_exists(__DIR__ . '/../.env')) {
+        $dotenv = file(__DIR__ . '/../.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($dotenv as $line) {
             $line = trim($line);
             if ($line === '' || $line[0] === '#') continue;
@@ -58,13 +56,15 @@ function gizmo_load_ai_key_from_sources(): string
         }
     }
 
-    // Local key files
-    foreach ([__DIR__ . '/data/ai.key', __DIR__ . '/data/openai.key'] as $kf) {
+    // Key files (local only)
+    $keyFiles = [__DIR__ . '/../data/ai.key', __DIR__ . '/../data/openai.key'];
+    foreach ($keyFiles as $kf) {
         if (is_readable($kf)) $candidates[] = trim((string) file_get_contents($kf));
     }
 
-    // Environment variables
-    foreach (['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'] as $envK) {
+    // Environment variables (Vercel)
+    $envKeys = ['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'];
+    foreach ($envKeys as $envK) {
         $val = trim((string) (getenv($envK) ?: ($_ENV[$envK] ?? '')));
         if ($val !== '') $candidates[] = $val;
     }
@@ -86,7 +86,7 @@ function gizmo_db(): PDO
 {
     static $pdo = null;
     if ($pdo === null) {
-        $hosts = array_unique([DB_HOST, DB_HOST === 'localhost' ? '127.0.0.1' : DB_HOST]);
+        $hosts = array_values(array_unique([DB_HOST, DB_HOST === 'localhost' ? '127.0.0.1' : DB_HOST]));
         $last = null;
         foreach ($hosts as $host) {
             try {
@@ -113,11 +113,11 @@ function gizmo_db_error_for_user(Throwable $e): string
 {
     $msg = $e->getMessage();
     if (preg_match('/2002|10061|refused|actively refused/i', $msg))
-        return 'Database connection failed. Make sure MySQL is running (XAMPP) or check Vercel env vars.';
+        return 'Database connection failed. Make sure MySQL (XAMPP) or PlanetScale (Vercel) is running.';
     if (preg_match('/1049|Unknown database/i', $msg))
-        return 'Database "GIZMO" not found. Import database/gizmo.sql via phpMyAdmin or PlanetScale.';
+        return 'Database not found. Import database/gizmo.sql via phpMyAdmin or PlanetScale console.';
     if (preg_match('/1045|Access denied/i', $msg))
-        return 'Database login failed. Check DB_USER/DB_PASS in config.php or Vercel env vars.';
-    return 'Database connection failed: ' . $e->getMessage();
+        return 'Database login failed. Check credentials in config.php or Vercel env vars.';
+    return 'Database connection failed.';
 }
 

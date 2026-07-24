@@ -12,7 +12,14 @@ function showStartError(msg){$('#inviteNote').textContent=msg}
 function showLobbyNote(msg){$('#lobbyNote').textContent=msg}
 function catInfo(){return categories[category]||{title:category,icon:'❓'}}
 
-function api(action,extra={}){return fetch('multiplayer.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,roomCode,playerId,userId:user?.id||null,...extra})}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||'Something went wrong.');return d})}
+// Vercel-compatible API — tries unified endpoint first, falls back to direct PHP
+const gApi = (endpoint, action, extra = {}) => {
+  if (window.GIZMO?.api) {
+    return window.GIZMO.api(endpoint, { action, roomCode, playerId, userId: user?.id||null, ...extra });
+  }
+  return fetch(`${endpoint}.php`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,roomCode,playerId,userId:user?.id||null,...extra})}).then(async r=>{const d=await r.json();if(!r.ok)throw new Error(d.error||'Something went wrong.');return d});
+};
+function api(action,extra={}){return gApi('multiplayer', action, extra)}
 function profileApi(action,body={}){return fetch('profiles.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})}).then(async r=>{const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Request failed');return d})}
 function authApi(action,body={}){return fetch('auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})}).then(async r=>{const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Request failed');return d})}
 function quizApi(action,body={}){return fetch('quiz.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})}).then(async r=>{const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Request failed');return d})}

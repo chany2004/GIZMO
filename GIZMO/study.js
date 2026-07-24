@@ -1,8 +1,10 @@
+// GIZMO Study — Vercel-compatible
 const $ = s => document.querySelector(s);
 let cards = [], cardIndex = 0, flipped = false, known = 0, quizIndex = 0, quizScore = 0, answered = false, setId = null;
 const user = JSON.parse(localStorage.getItem('gizmoUser') || 'null');
 
 async function studyApi(action, body = {}) {
+  if (window.GIZMO?.studyApi) return window.GIZMO.studyApi(action, body);
   const r = await fetch('study.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -1,34 +1,51 @@
-# GIZMO game landing page
+# GIZMO — Study & Game System 🧠🎮
 
-Open `index.html` through XAMPP (for example `http://localhost/GIZMO/`) to play the memory game and use the email account flow. Accounts are stored locally in the browser for this prototype.
+## 🚀 Deploy to Vercel
 
-## Enabling real Google sign-in
+### Option 1: Static Only (No Backend)
+The app works fully offline on Vercel without PHP/MySQL:
+- ✅ Solo trivia quizzes
+- ✅ Study flashcards (create, flip, quiz)
+- ✅ AI Chat UI (with Groq/Gemini key via config.js)
+- ✅ LocalStorage login/scores
+- ⚠️ Multiplayer rooms (requires MySQL)
 
-1. Create a Web OAuth client in Google Cloud Console.
-2. Add your local and production URLs to **Authorized JavaScript origins**.
-3. At the top of `app.js`, before the existing code, add:
+**Just push to Vercel — no setup needed!**
 
-```js
-window.GIZMO_GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+### Option 2: Full Stack (With Database)
+1. Create a free MySQL database at [PlanetScale](https://planetscale.com)
+2. Import `database/gizmo.sql` via PlanetScale console
+3. In Vercel Project Settings → Environment Variables:
+   ```
+   DB_HOST=your-planetscale-host
+   DB_NAME=GIZMO
+   DB_USER=your-username
+   DB_PASS=your-password
+   ```
+4. Deploy!
+
+## 🏠 Local Development (XAMPP)
+1. Start Apache + MySQL in XAMPP
+2. Import `database/gizmo.sql` via phpMyAdmin
+3. Access via `http://localhost/GIZMO`
+
+## 📁 Project Structure
+```
+GIZMO/
+├── index.html          # Homepage
+├── game.html           # Multiplayer game
+├── study.html          # Study flashcards
+├── dashboard.html      # User dashboard
+├── api.php             # Unified API endpoint (Vercel & XAMPP)
+├── config.php          # Auto-detects XAMPP vs Vercel
+├── helpers.php         # Shared PHP functions
+├── js/config.js        # API routing (Vercel fallback)
+├── vercel.json         # Vercel deployment config
+├── styles.css          # Global styles
+├── game.css            # Game UI
+├── study.css           # Study UI (enhanced)
+├── trivia.css          # Quiz UI (enhanced)
+├── lobby.css           # Lobby UI (enhanced)
+└── database/gizmo.sql  # MySQL schema
 ```
 
-The Google button will then invoke Google Identity Services. For a production app, send the returned ID token to a backend and validate it there before creating a user session.
-
-**OpenAI API Key**
-
-- **Add via .htaccess (XAMPP/Apache):** Edit `.htaccess` in the project root and set `SetEnv OPENAI_API_KEY "your_key_here"`. Restart Apache.
-- **Add via .env file (project-local):** Create a file named `.env` in the project root with the line `OPENAI_API_KEY=your_key_here`.
-- **Add as system environment variable:** On Windows, add `OPENAI_API_KEY` in System Properties → Environment Variables, then restart Apache/XAMPP.
-- `config.php` now reads `OPENAI_API_KEY` from the environment or `.env` and defines the `OPENAI_API_KEY` constant for server-side code.
-
-Replace `your_key_here` with the actual OpenAI API key. Keep secrets out of version control.
-
-**Quick CLI helper**
-
-If you prefer a CLI helper that writes `.env` for you (recommended for local development), run from the project root:
-
-```bash
-php set_openai_key.php "your_real_openai_key"
-```
-
-This creates/overwrites `.env` with `OPENAI_API_KEY=...`. Restart Apache/XAMPP afterwards. Do not paste your key into public places.

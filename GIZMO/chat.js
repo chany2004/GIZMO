@@ -98,10 +98,12 @@
       const typingBubble = appendBubble('Thinking… 🤖', 'ai typing');
 
       try {
-        const response = await fetch('chat.php', {
+        const apiUrl = window.GIZMO?.apiBase ? `${window.GIZMO.apiBase}` : 'chat.php';
+        const body = window.GIZMO?.api ? { endpoint: 'chat', message, history: chatHistory } : { message, history: chatHistory };
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, history: chatHistory })
+          body: JSON.stringify(body)
         });
 
         const data = await response.json().catch(() => ({}));
