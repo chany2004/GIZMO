@@ -110,6 +110,9 @@ async function copyText(text,noteEl,successMsg){
 async function createRoom(){
   var btn=$('#startGame');
   if(!category){showStartError('Please choose a category.');return}
+  // A Vercel deployment can run immediately without a PHP/MySQL backend.
+  // Start a browser-local practice room instead of waiting for an API response.
+  if(window.GIZMO?.isVercel){startOfflineGame();return}
   btn.disabled=true;
   showStartError('');
   try{
@@ -131,6 +134,7 @@ function startOfflineGame(){
   questions=offlineWorldQuestions.map(q=>({...q}));
   questionCache[category]=questions;
   room={status:'started',offline:true,category:category,hostId:playerId,startedAt:Date.now()/1000,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
+  showStartError('Practice mode: this game runs locally in your browser.');
   enterGame({room:room});
 }
 
