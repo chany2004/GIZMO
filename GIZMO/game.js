@@ -173,6 +173,7 @@ async function createRoom(){
   var btn=$('#startGame');
   if(btn.disabled)return;
   if(!category){showStartError('Please choose a category.');return}
+  var loadingStartedAt=Date.now();
   setRoomCreating(true,'Connecting to the game server');
   var progressTimer=setTimeout(function(){setRoomCreating(true,'Almost there — preparing your lobby')},1400);
   showStartError('');
@@ -186,7 +187,7 @@ async function createRoom(){
     playerId=d.playerId;
     localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
     setRoomCreating(true,'Room ready — opening the lobby');
-    await pause(220);
+    await pause(Math.max(220,900-(Date.now()-loadingStartedAt)));
     // Every device sees the Room Created lobby before the host starts.
     enterLobby(d.state);
   }catch(e){

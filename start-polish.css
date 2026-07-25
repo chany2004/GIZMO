@@ -13,15 +13,16 @@
 .create-room-spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.38); border-top-color: #fff; border-radius: 50%; animation: createRoomSpin .7s linear infinite; }
 #startGame.is-creating .create-room-arrow { display: none; }
 #startGame.is-creating .create-room-spinner { display: inline-block; }
-.room-creation-status { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 13px; max-height: 0; margin: 0; padding: 0 16px; overflow: hidden; opacity: 0; border: 1px solid transparent; border-radius: 16px; text-align: left; transform: translateY(8px); transition: max-height .28s ease, margin .28s ease, padding .28s ease, opacity .2s ease, transform .28s ease; }
-.room-creation-status.is-visible { max-height: 90px; margin: 12px 0 0; padding: 12px 16px; opacity: 1; border-color: #ddd9ff; background: linear-gradient(135deg, #f5f3ff, #eef2ff); transform: translateY(0); }
-.room-creation-orbit { display: grid; place-items: center; width: 46px; height: 46px; border: 2px dashed #8b80ee; border-radius: 50%; animation: createRoomSpin 3s linear infinite; }
-.room-creation-orbit i { font-style: normal; font-size: 23px; animation: createRoomSpin 3s linear infinite reverse; }
-.room-creation-copy { display: flex; min-width: 0; flex-direction: column; line-height: 1.25; }
-.room-creation-copy strong { color: #282264; font-size: 14px; }
-.room-creation-copy small { margin-top: 3px; overflow: hidden; color: #6b7280; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.room-creation-status { position: fixed; z-index: 9999; inset: 0; display: flex; visibility: hidden; align-items: center; justify-content: center; flex-direction: column; gap: 18px; padding: 28px; overflow: hidden; opacity: 0; background: rgba(245,243,255,.94); text-align: center; pointer-events: none; backdrop-filter: blur(10px); transition: opacity .22s ease, visibility 0s linear .22s; }
+.room-creation-status.is-visible { visibility: visible; opacity: 1; pointer-events: all; transition-delay: 0s; }
+.room-creation-orbit { position: relative; display: grid; place-items: center; width: 104px; height: 104px; border: 4px dashed #796bea; border-radius: 50%; background: #fff; box-shadow: 0 18px 50px rgba(67,56,202,.22); animation: createRoomSpin 2.2s linear infinite; }
+.room-creation-orbit::after { position: absolute; width: 14px; height: 14px; border: 4px solid #fff; border-radius: 50%; background: #5a4bdd; box-shadow: 0 2px 9px rgba(67,56,202,.35); content: ""; top: -8px; }
+.room-creation-orbit i { font-style: normal; font-size: 48px; animation: createRoomSpin 2.2s linear infinite reverse; }
+.room-creation-copy { display: flex; min-width: 0; flex-direction: column; line-height: 1.3; }
+.room-creation-copy strong { color: #282264; font: 800 24px 'Baloo 2', sans-serif; }
+.room-creation-copy small { margin-top: 4px; color: #6b7280; font-size: 14px; }
 .room-creation-dots { display: flex; gap: 3px; }
-.room-creation-dots i { width: 5px; height: 5px; border-radius: 50%; background: #5548d9; animation: createRoomDot .9s ease-in-out infinite alternate; }
+.room-creation-dots i { width: 9px; height: 9px; border-radius: 50%; background: #5548d9; animation: createRoomDot .7s ease-in-out infinite alternate; }
 .room-creation-dots i:nth-child(2) { animation-delay: .15s; }
 .room-creation-dots i:nth-child(3) { animation-delay: .3s; }
 @keyframes createRoomSpin { to { transform: rotate(360deg); } }
