@@ -93,17 +93,13 @@
       try {
         var resp, data, txt;
 
-        // Try chat.php directly
-        try {
-          resp = await fetch('chat.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: message, history: chatHistory })
-          });
-          txt = await resp.text();
-          data = txt ? JSON.parse(txt) : {};
-        } catch (innerErr) {
-          // Fallback to api.php
+        // Use the unified API. On Vercel this is /api; on XAMPP it is api.php.
+        // Direct chat.php requests bypassed the Vercel Function and caused the
+        // misleading old "AI is offline" fallback.
+        if (window.GIZMO && window.GIZMO.chatApi) {
+          data = await window.GIZMO.chatApi({ message: message, history: chatHistory });
+          resp = { ok: true };
+        } else {
           resp = await fetch('api.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
