@@ -9,10 +9,15 @@ function ensure_quiz_catalog(PDO $db): void
     }
     $catalog = require $catalogPath;
 
+    // One remote TiDB query is far faster than checking every category one at
+    // a time whenever a serverless quiz request starts.
+    $existing = [];
+    foreach ($db->query('SELECT slug FROM quiz_categories') as $row) {
+        $existing[$row['slug']] = true;
+    }
+
     foreach ($catalog as $slug => $cat) {
-        $check = $db->prepare('SELECT id FROM quiz_categories WHERE slug = ? LIMIT 1');
-        $check->execute([$slug]);
-        if ($check->fetch()) {
+        if (isset($existing[$slug])) {
             continue;
         }
 
@@ -34,6 +39,7 @@ function ensure_quiz_catalog(PDO $db): void
                 $insertO->execute([$qId, $opt, $j, $j === (int) $q['correct'] ? 1 : 0]);
             }
         }
+        $existing[$slug] = true;
     }
 }
 

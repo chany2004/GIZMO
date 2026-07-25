@@ -1,21 +1,38 @@
 const $=s=>document.querySelector(s);
-let category='world',roomCode='',playerId='',room=null,currentRound=0,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup';
+let category='world',roomCode='',playerId='',room=null,currentRound=0,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup',usingLocalQuestions=false,gameStarting=false;
 let categories={},questions=[],questionCache={};
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
 $('#playerName').value=user?.name||'';
 const offlineWorldQuestions=[
-  {text:'What is the capital of Australia?',options:['Sydney','Melbourne','Canberra','Perth'],correct:2},
-  {text:'The pyramids of Giza are in which country?',options:['Mexico','Greece','Egypt','Italy'],correct:2},
-  {text:'Which is the largest ocean?',options:['Atlantic','Pacific','Indian','Arctic'],correct:1},
-  {text:'What is the smallest continent?',options:['Europe','Antarctica','Australia','South America'],correct:2},
-  {text:'Birds have which feature?',options:['Fur','Feathers','Scales','Shells'],correct:1}
+  {text:'Largest ocean?',options:['Atlantic','Pacific','Indian','Arctic'],correct:1},
+  {text:'Pyramids of Giza are in?',options:['Mexico','Greece','Egypt','Italy'],correct:2},
+  {text:'Capital of Japan?',options:['Kyoto','Tokyo','Osaka','Seoul'],correct:1},
+  {text:'Sahara is in?',options:['Asia','Africa','Australia','Europe'],correct:1},
+  {text:'Red Planet?',options:['Venus','Jupiter','Mars','Mercury'],correct:2},
+  {text:'Paris is in?',options:['Spain','France','Italy','Germany'],correct:1},
+  {text:'Everest range?',options:['Andes','Alps','Himalayas','Rockies'],correct:2},
+  {text:'Capital of Australia?',options:['Sydney','Melbourne','Canberra','Perth'],correct:2},
+  {text:'Brazil is in?',options:['Africa','South America','Europe','Asia'],correct:1},
+  {text:'Longest river?',options:['Amazon','Nile','Yangtze','Mississippi'],correct:1},
+  {text:'Boot-shaped country?',options:['Greece','Italy','Portugal','Chile'],correct:1},
+  {text:'Ocean east of Africa?',options:['Pacific','Arctic','Indian','Atlantic'],correct:2},
+  {text:'Great Barrier Reef?',options:['Australia','Indonesia','Philippines','India'],correct:0},
+  {text:'Smallest continent?',options:['Europe','Antarctica','Australia','South America'],correct:2},
+  {text:'Big Apple city?',options:['Los Angeles','New York','Chicago','Boston'],correct:1}
 ];
 
 const screens=['startScreen','lobbyScreen','quizScreen'];
 function showScreen(id){screens.forEach(s=>$(`#${s}`)?.classList.toggle('hidden',s!==id))}
 function isHost(){return room?.hostId===playerId}
 function playerName(){return $('#playerName').value.trim()||'Player'}
+function pause(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
+function generateNumericRoomCode(){
+  var value;
+  if(window.crypto?.getRandomValues){var values=new Uint32Array(1);window.crypto.getRandomValues(values);value=values[0]}
+  else value=Math.floor(Math.random()*900000);
+  return String(100000+(value%900000));
+}
 function showStartError(msg){$('#inviteNote').textContent=msg}
 function showLobbyNote(msg){$('#lobbyNote').textContent=msg}
 function cleanCategoryIcon(slug,icon){return !icon||/[ÃÂïð]/.test(icon)?(categoryIcons[slug]||'🎯'):icon}
@@ -82,23 +99,50 @@ async function loadCategories(){
     {slug:'animals',title:'Animals',icon:'🐾'},{slug:'technology',title:'Technology',icon:'💻'},{slug:'math',title:'Math',icon:'🔢'},
     {slug:'literature',title:'Literature',icon:'📚'},{slug:'art',title:'Art',icon:'🎨'},{slug:'philippines',title:'Philippines',icon:'🇵🇭'}
   ];
+  // Render local choices immediately so mobile users never wait on a blank
+  // select while the serverless function wakes up.
+  renderCategorySelect(fallback);
   try{
-    var d=await quizApi('categories');
+    var d=await Promise.race([
+      quizApi('categories'),
+      new Promise(function(_,reject){setTimeout(function(){reject(new Error('Category request timed out.'))},2500)})
+    ]);
     var list=d.categories?.length?d.categories:fallback;
-    if(!category||!list.some(function(c){return c.slug===category}))category=list[0]?.slug||'world';
     renderCategorySelect(list);
-  }catch(e){
-    category='world';
-    renderCategorySelect(fallback);
-  }
+  }catch(e){}
+}
+
+function fallbackQuestions(){
+  return offlineWorldQuestions.map(function(q){
+    return {text:q.text,options:q.options.slice(),correct:q.correct};
+  });
 }
 
 async function ensureQuestions(slug){
-  if(questionCache[slug]){questions=questionCache[slug];category=slug;return}
-  var d=await quizApi('questions',{slug:slug});
-  questionCache[slug]=d.questions;
-  questions=d.questions;
+  if(questionCache[slug]?.length){questions=questionCache[slug];category=slug;return}
+  try{
+    var d=await Promise.race([
+      quizApi('questions',{slug:slug}),
+      new Promise(function(_,reject){setTimeout(function(){reject(new Error('Question request timed out.'))},4000)})
+    ]);
+    if(!Array.isArray(d.questions)||!d.questions.length)throw new Error('No questions found.');
+    questionCache[slug]=d.questions;
+    usingLocalQuestions=false;
+  }catch(e){
+    questionCache[slug]=fallbackQuestions();
+    usingLocalQuestions=true;
+  }
+  questions=questionCache[slug];
   category=slug;
+}
+
+function setGameLoading(active,message){
+  var loader=$('#gameLoading');
+  var shell=$('#quizScreen');
+  if(!loader||!shell)return;
+  if(message)$('#gameLoadingMessage').textContent=message;
+  loader.classList.toggle('hidden',!active);
+  shell.classList.toggle('is-game-loading',active);
 }
 
 function roomInviteUrl(){var url=new URL(location.href);url.searchParams.set('room',roomCode);url.searchParams.delete('category');return url.href}
@@ -112,9 +156,6 @@ async function copyText(text,noteEl,successMsg){
 async function createRoom(){
   var btn=$('#startGame');
   if(!category){showStartError('Please choose a category.');return}
-  // A Vercel deployment can run immediately without a PHP/MySQL backend.
-  // Start a browser-local practice room instead of waiting for an API response.
-  if(window.GIZMO?.isVercel){startOfflineGame();return}
   btn.disabled=true;
   showStartError('');
   try{
@@ -122,22 +163,23 @@ async function createRoom(){
     roomCode=d.roomCode;
     playerId=d.playerId;
     localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
+    // Every device sees the Room Created lobby before the host starts.
     enterLobby(d.state);
   }catch(e){
-    if(window.GIZMO?.isVercel){startOfflineGame();return}
+    if(window.GIZMO?.isVercel){startOfflineRoom();return}
     showStartError(e.message)
   }
   finally{btn.disabled=false}
 }
 
-function startOfflineGame(){
-  roomCode='LOCAL';
+function startOfflineRoom(){
+  roomCode=generateNumericRoomCode();
   playerId='local-player';
   questions=offlineWorldQuestions.map(q=>({...q}));
   questionCache[category]=questions;
-  room={status:'started',offline:true,category:category,hostId:playerId,startedAt:Date.now()/1000,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
-  showStartError('Practice mode: this game runs locally in your browser.');
-  enterGame({room:room});
+  room={status:'lobby',offline:true,category:category,hostId:playerId,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
+  localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
+  enterLobby({room:room});
 }
 
 // Step 2: Lobby — share Room ID
@@ -158,8 +200,10 @@ function enterLobby(state){
   $('#waitForHost').classList.toggle('hidden',host);
   showLobbyNote('');
   renderLobby(state);
-  startPolling();
-  api('state').then(function(d){handleState(d.state)}).catch(function(){});
+  if(!room.offline){
+    startPolling();
+    api('state').then(function(d){handleState(d.state)}).catch(function(){});
+  }
 }
 
 function renderLobby(state){
@@ -187,6 +231,11 @@ function renderLobby(state){
 }
 
 async function beginGame(){
+  if(room?.offline){
+    room.status='started';
+    enterGame({room:room});
+    return;
+  }
   var btn=$('#beginGame');
   btn.disabled=true;
   showLobbyNote('Starting game…');
@@ -198,15 +247,31 @@ async function beginGame(){
 
 // Step 3: Live game
 async function enterGame(state){
+  if(gameStarting){
+    room=state.room;
+    return;
+  }
+  gameStarting=true;
   phase='playing';
   room=state.room;
   category=room.category;
+  clearInterval(poll);
+  clearInterval(clock);
+  poll=null;
+  clock=null;
   showScreen('quizScreen');
   $('#roomLabel').textContent='ROOM '+roomCode;
   $('#resultActions').classList.add('hidden');
   $('#beginGame').disabled=false;
-  await renderGame(state);
-  if(!room.offline)startPolling();
+  setGameLoading(true,'Loading your challenge…');
+  try{
+    await Promise.all([renderGame(state),pause(1800)]);
+  }finally{
+    gameStarting=false;
+    setGameLoading(false);
+  }
+  if(!room.offline&&!usingLocalQuestions)startPolling();
+  else startClock();
 }
 
 async function renderGame(state){
@@ -300,7 +365,9 @@ async function submitAnswer(answer,button){
   answerTransitioning=true;
   document.querySelectorAll('.answer').forEach(function(b){b.disabled=true});
   try{
-    var d=room?.offline?offlineAnswer(answer):await api('answer',{round:currentRound,answer:answer});
+    var d=(room?.offline||usingLocalQuestions)
+      ?offlineAnswer(answer)
+      :await api('answer',{round:currentRound,answer:answer});
     var correctButton=document.querySelector('.answer[data-answer-index="'+d.correctAnswer+'"]');
     button.classList.add(d.correct?'correct':'wrong');
     if(correctButton&&!d.correct)correctButton.classList.add('correct');
@@ -324,7 +391,7 @@ async function submitAnswer(answer,button){
 
 function offlineAnswer(answer){
   var item=questions[currentRound],correct=item.correct===answer;
-  var player=room.players[0];
+  var player=room.players.find(function(p){return p.id===playerId})||room.players[0];
   if(correct){player.streak=(player.streak||0)+1;player.correct=(player.correct||0)+1;player.score+=(100+((player.streak-1)*25))}else player.streak=0;
   player.round=currentRound+1;
   return {correct:correct,correctAnswer:item.correct,state:{room:room}};
@@ -336,7 +403,7 @@ function finish(){
   $('#progressBar').style.width='100%';
   $('#timer').textContent='0';
   $('#gameBoard').innerHTML='';
-  var winner=room.players[0];
+  var winner=room.players.slice().sort(function(a,b){return (b.score||0)-(a.score||0)})[0];
   $('#gameTitle').textContent=winner?.id===playerId?'You are the winner!':'Game finished!';
   $('#gameInstruction').textContent=(winner?.name||'Player')+' has the highest score: '+(winner?.score||0)+' points.';
   $('#answerNote').textContent='Final scoreboard is shown below.';
@@ -344,10 +411,8 @@ function finish(){
 }
 
 // Polling
-function startPolling(){
-  clearInterval(poll);clearInterval(clock);
-  var ms=phase==='lobby'?1000:2500;
-  poll=setInterval(function(){api('state').then(function(d){handleState(d.state)}).catch(function(){})},ms);
+function startClock(){
+  clearInterval(clock);
   clock=setInterval(function(){
     if(phase!=='playing'||room?.status!=='started')return;
     // Each player gets a fresh 20-second timer for every question.
@@ -356,6 +421,13 @@ function startPolling(){
     var remaining=20-((Date.now()-questionStartedAt)/1000);
     $('#timer').textContent=Math.max(0,Math.ceil(remaining));
   },500);
+}
+
+function startPolling(){
+  clearInterval(poll);
+  var ms=phase==='lobby'?1000:2500;
+  poll=setInterval(function(){api('state').then(function(d){handleState(d.state)}).catch(function(){})},ms);
+  startClock();
 }
 
 // Events

@@ -61,29 +61,36 @@ function gizmo_is_placeholder_key(string $key): bool
     return false;
 }
 
+function gizmo_is_supported_ai_key(string $key): bool
+{
+    return str_starts_with($key, 'gsk_')
+        || str_starts_with($key, 'AIza')
+        || str_starts_with($key, 'sk-');
+}
+
 function gizmo_load_ai_key_from_sources(): string
 {
     $candidates = [];
 
-    // .env file
-    foreach (['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'] as $envKey) {
+    // A provider-specific hosted key must win over a stale generic key.
+    foreach (['GROQ_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY'] as $envKey) {
         $value = gizmo_env($envKey);
         if ($value !== '') $candidates[] = $value;
     }
 
-    // Local key files
+    // Locally saved setup keys are a secondary source.
     foreach ([__DIR__ . '/data/ai.key', __DIR__ . '/data/openai.key'] as $kf) {
         if (is_readable($kf)) $candidates[] = trim((string) file_get_contents($kf));
     }
 
-    // Environment variables
-    foreach (['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'] as $envK) {
+    // Generic compatibility setting only applies when no provider key exists.
+    foreach (['AI_API_KEY'] as $envK) {
         $val = trim((string) (getenv($envK) ?: ($_ENV[$envK] ?? '')));
         if ($val !== '') $candidates[] = $val;
     }
 
     foreach ($candidates as $candidate) {
-        if (!gizmo_is_placeholder_key($candidate)) return $candidate;
+        if (!gizmo_is_placeholder_key($candidate) && gizmo_is_supported_ai_key($candidate)) return $candidate;
     }
     return '';
 }
@@ -109,18 +116,35 @@ function gizmo_db(): PDO
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES   => false,
                 ];
-                // TiDB Cloud requires TLS. Store the CA certificate as Base64 in
-                // Vercel, then create a temporary certificate file per runtime.
-                if (DB_SSL_CA_BASE64 !== '' && defined('PDO::MYSQL_ATTR_SSL_CA')) {
-                    $caPath = sys_get_temp_dir() . '/gizmo-tidb-ca.pem';
-                    if (!is_file($caPath)) {
-                        $ca = base64_decode(DB_SSL_CA_BASE64, true);
-                        if ($ca === false) throw new PDOException('DB_SSL_CA_BASE64 is not valid Base64.');
-                        file_put_contents($caPath, $ca, LOCK_EX);
+                // TiDB Cloud only accepts TLS. Prefer a supplied CA and otherwise
+                // use the trusted CA bundle included by Vercel's Linux runtime.
+                if (defined('PDO::MYSQL_ATTR_SSL_CA')) {
+                    $caPath = '';
+                    if (DB_SSL_CA_BASE64 !== '') {
+                        $caPath = sys_get_temp_dir() . '/gizmo-tidb-ca.pem';
+                        if (!is_file($caPath)) {
+                            $ca = base64_decode(DB_SSL_CA_BASE64, true);
+                            if ($ca === false) throw new PDOException('DB_SSL_CA_BASE64 is not valid Base64.');
+                            file_put_contents($caPath, $ca, LOCK_EX);
+                        }
+                    } elseif (DB_HOST !== 'localhost' && DB_HOST !== '127.0.0.1') {
+                        foreach ([
+                            '/etc/pki/tls/certs/ca-bundle.crt',
+                            '/etc/ssl/cert.pem',
+                            '/etc/ssl/certs/ca-certificates.crt',
+                        ] as $systemCa) {
+                            if (is_readable($systemCa)) {
+                                $caPath = $systemCa;
+                                break;
+                            }
+                        }
                     }
-                    $options[PDO::MYSQL_ATTR_SSL_CA] = $caPath;
-                    if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
-                        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+
+                    if ($caPath !== '') {
+                        $options[PDO::MYSQL_ATTR_SSL_CA] = $caPath;
+                        if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
+                            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+                        }
                     }
                 }
                 $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);

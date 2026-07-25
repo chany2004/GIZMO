@@ -67,6 +67,100 @@
   animation: shellFadeIn 0.4s ease-out;
 }
 
+/* Intentional game-start screen; it replaces the plain question placeholder
+   while the server or local round gets ready. */
+.duel-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.duel-shell.is-game-loading {
+  min-height: 460px;
+}
+
+.game-loading {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 28px;
+  border-radius: inherit;
+  background: linear-gradient(150deg, rgba(255,255,255,.985), rgba(247,245,255,.985));
+  color: #1e1b4b;
+  text-align: center;
+}
+
+.game-loading-orbit {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 8px;
+  border: 4px solid #ddd6fe;
+  border-top-color: #5b4bea;
+  border-right-color: #f86e83;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  animation: gameLoaderSpin 1s linear infinite;
+}
+
+.game-loading-orbit span {
+  width: 58px;
+  height: 58px;
+  border-radius: 19px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #fde68a, #f9c846);
+  box-shadow: 0 9px 0 #eab52b;
+  font-size: 28px;
+  animation: gameLoaderCounterSpin 1s linear infinite;
+}
+
+.game-loading p {
+  margin: 8px 0 0;
+  color: #6155c7;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.game-loading strong {
+  font: 800 clamp(25px,4vw,34px) "Baloo 2", sans-serif;
+  line-height: 1.08;
+}
+
+.game-loading-copy {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.game-loading-dots {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.game-loading-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #6558e8;
+  animation: gameLoaderDot 0.9s ease-in-out infinite;
+}
+
+.game-loading-dots i:nth-child(2) { animation-delay: .14s; }
+.game-loading-dots i:nth-child(3) { animation-delay: .28s; }
+
+@keyframes gameLoaderSpin { to { transform: rotate(360deg); } }
+@keyframes gameLoaderCounterSpin { to { transform: rotate(-360deg); } }
+@keyframes gameLoaderDot {
+  0%, 100% { transform: translateY(0); opacity: .38; }
+  50% { transform: translateY(-7px); opacity: 1; }
+}
+
 @keyframes shellFadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -528,6 +622,31 @@
   .game-shell {
     padding: 24px 18px;
     border-radius: 22px;
+  }
+
+  .duel-shell.is-game-loading {
+    min-height: 390px;
+  }
+
+  .game-loading {
+    padding: 22px 16px;
+  }
+
+  .game-loading-orbit {
+    width: 74px;
+    height: 74px;
+    border-width: 3px;
+  }
+
+  .game-loading-orbit span {
+    width: 49px;
+    height: 49px;
+    border-radius: 16px;
+    font-size: 23px;
+  }
+
+  .game-loading-copy {
+    font-size: 13px;
   }
 
   .game-shell h1 {

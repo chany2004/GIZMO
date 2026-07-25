@@ -5,11 +5,21 @@ const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geogr
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
 $('#playerName').value=user?.name||'';
 const offlineWorldQuestions=[
-  {text:'What is the capital of Australia?',options:['Sydney','Melbourne','Canberra','Perth'],correct:2},
-  {text:'The pyramids of Giza are in which country?',options:['Mexico','Greece','Egypt','Italy'],correct:2},
-  {text:'Which is the largest ocean?',options:['Atlantic','Pacific','Indian','Arctic'],correct:1},
-  {text:'What is the smallest continent?',options:['Europe','Antarctica','Australia','South America'],correct:2},
-  {text:'Birds have which feature?',options:['Fur','Feathers','Scales','Shells'],correct:1}
+  {text:'Largest ocean?',options:['Atlantic','Pacific','Indian','Arctic'],correct:1},
+  {text:'Pyramids of Giza are in?',options:['Mexico','Greece','Egypt','Italy'],correct:2},
+  {text:'Capital of Japan?',options:['Kyoto','Tokyo','Osaka','Seoul'],correct:1},
+  {text:'Sahara is in?',options:['Asia','Africa','Australia','Europe'],correct:1},
+  {text:'Red Planet?',options:['Venus','Jupiter','Mars','Mercury'],correct:2},
+  {text:'Paris is in?',options:['Spain','France','Italy','Germany'],correct:1},
+  {text:'Everest range?',options:['Andes','Alps','Himalayas','Rockies'],correct:2},
+  {text:'Capital of Australia?',options:['Sydney','Melbourne','Canberra','Perth'],correct:2},
+  {text:'Brazil is in?',options:['Africa','South America','Europe','Asia'],correct:1},
+  {text:'Longest river?',options:['Amazon','Nile','Yangtze','Mississippi'],correct:1},
+  {text:'Boot-shaped country?',options:['Greece','Italy','Portugal','Chile'],correct:1},
+  {text:'Ocean east of Africa?',options:['Pacific','Arctic','Indian','Atlantic'],correct:2},
+  {text:'Great Barrier Reef?',options:['Australia','Indonesia','Philippines','India'],correct:0},
+  {text:'Smallest continent?',options:['Europe','Antarctica','Australia','South America'],correct:2},
+  {text:'Big Apple city?',options:['Los Angeles','New York','Chicago','Boston'],correct:1}
 ];
 
 const screens=['startScreen','lobbyScreen','quizScreen'];
@@ -260,7 +270,7 @@ async function enterGame(state){
   try{
     // Keep the start screen visible briefly so the transition feels intentional,
     // not like a frozen "Loading question" page.
-    await Promise.all([renderGame(state),pause(650)]);
+    await Promise.all([renderGame(state),pause(1800)]);
   }finally{
     gameStarting=false;
     setGameLoading(false);
