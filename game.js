@@ -15,6 +15,7 @@ const offlineWorldQuestions=[
 const screens=['startScreen','lobbyScreen','quizScreen'];
 function showScreen(id){screens.forEach(s=>$(`#${s}`)?.classList.toggle('hidden',s!==id))}
 function isHost(){return room?.hostId===playerId}
+function shouldAutoStartOnMobile(){return !!(window.matchMedia&&window.matchMedia('(max-width: 760px)').matches)}
 function playerName(){return $('#playerName').value.trim()||'Player'}
 function showStartError(msg){$('#inviteNote').textContent=msg}
 function showLobbyNote(msg){$('#lobbyNote').textContent=msg}
@@ -122,7 +123,14 @@ async function createRoom(){
     roomCode=d.roomCode;
     playerId=d.playerId;
     localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
-    enterLobby(d.state);
+    // Phone players usually want a quick solo round. Start immediately there;
+    // desktop keeps the shareable Room ID lobby for multiplayer sessions.
+    if(shouldAutoStartOnMobile()){
+      var started=await api('start');
+      enterGame(started.state);
+    }else{
+      enterLobby(d.state);
+    }
   }catch(e){
     if(window.GIZMO?.isVercel){startOfflineGame();return}
     showStartError(e.message)
