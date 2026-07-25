@@ -27,6 +27,13 @@ $data = read_json();
 $endpoint = $data['endpoint'] ?? '';
 $action = $data['action'] ?? '';
 
+// AI chat does not read or write the database. Let it run even while a hosted
+// database is being configured (for example, while TiDB TLS settings are
+// still being added on Vercel).
+if ($endpoint === 'chat') {
+    require __DIR__ . '/chat.php';
+}
+
 try {
     $db = gizmo_db();
 } catch (Throwable $e) {
@@ -58,10 +65,6 @@ switch ($endpoint) {
     case 'study':
         // Study actions: aiStatus, generateCards, saveSet, saveResult, list
         require __DIR__ . '/study.php';
-        break;
-    case 'chat':
-        // Chat: send message to AI
-        require __DIR__ . '/chat.php';
         break;
     default:
         json_reply(['error' => 'Unknown endpoint: ' . $endpoint], 400);

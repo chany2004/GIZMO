@@ -124,7 +124,7 @@
         }
       } catch (err) {
         if (typingBubble && typingBubble.parentNode) typingBubble.remove();
-        appendBubble('AI needs a backend connection. The chat button still shows!', 'ai');
+        appendBubble(err && err.message ? ('AI error: ' + err.message) : 'AI needs a backend connection.', 'ai');
       } finally {
         isSending = false;
         sendBtn.disabled = false;
