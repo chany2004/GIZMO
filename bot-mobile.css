@@ -9,12 +9,14 @@
   .hero-art{display:block!important;grid-column:2;grid-row:1 / span 2;min-width:0;width:100%;height:190px;margin:0}
   .hero-art .orbit{transform:scale(.42);transform-origin:center top;left:50%;margin-left:-92px}
   .hero-art .orbit-one{top:-8px}.hero-art .orbit-two{top:16px}
-  .gizmo-bot{top:39px;left:50%;margin-left:-65px;transform:scale(.55);transform-origin:center top}
+  /* Center the full, unscaled mascot first; scaling then keeps every part
+     inside the small mobile art column instead of clipping its body. */
+  .gizmo-bot{top:39px;left:50%;margin-left:-109px;transform:scale(.55);transform-origin:center top}
   .float-card{display:none}.spark.s1{top:28px;left:3%}.spark.s2{bottom:16px;right:5%}.spark.s3{top:76px;right:3%;font-size:28px}
 }
 @media(max-width:390px){
   .hero{grid-template-columns:minmax(0,1fr) 37%}
   .hero h1{font-size:clamp(26px,7.2vw,32px);letter-spacing:-.7px}
-  .hero-art{height:160px}.gizmo-bot{top:35px;transform:scale(.46);margin-left:-54px}
+  .hero-art{height:160px}.gizmo-bot{top:35px;transform:scale(.46);margin-left:-109px}
   .hero-art .orbit{transform:scale(.34);margin-left:-75px}.spark{font-size:18px}
 }

@@ -73,11 +73,13 @@
 
   .hero-art {
     height: 150px;
+    overflow: visible;
   }
 
   .gizmo-bot {
     top: 32px;
-    margin-left: -51px;
+    /* Half of the original 218px width: center before scaling. */
+    margin-left: -109px;
     transform: scale(0.43);
   }
 
@@ -194,11 +196,11 @@
   }
 
   .hero-art {
-    height: 135px;
+    height: 150px;
   }
 
   .gizmo-bot {
-    margin-left: -46px;
+    margin-left: -109px;
     transform: scale(0.39);
   }
 }
