@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="trivia.css?v=3" />
     <link rel="stylesheet" href="game.css?v=9" />
-    <link rel="stylesheet" href="start-polish.css?v=1" />
+    <link rel="stylesheet" href="start-polish.css?v=2" />
     <link rel="stylesheet" href="profile.css" />
     <link rel="stylesheet" href="lobby.css?v=2" />
     <link rel="stylesheet" href="lobby-polish.css?v=1" />
@@ -53,7 +53,19 @@
           <span>🏆 Highest score wins</span>
         </div>
         <p class="invite-note" id="inviteNote" aria-live="polite"></p>
-        <button class="button" type="button" id="startGame">Create room <span>→</span></button>
+        <button class="button" type="button" id="startGame">
+          <span class="create-room-label">Create room</span>
+          <span class="create-room-arrow" aria-hidden="true">→</span>
+          <span class="create-room-spinner" aria-hidden="true"></span>
+        </button>
+        <div class="room-creation-status" id="roomCreationStatus" role="status" aria-live="polite" aria-hidden="true">
+          <span class="room-creation-orbit" aria-hidden="true"><i>🌍</i></span>
+          <span class="room-creation-copy">
+            <strong id="roomCreationTitle">Creating your room…</strong>
+            <small id="roomCreationMessage">Connecting to the game server</small>
+          </span>
+          <span class="room-creation-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        </div>
       </section>
 
       <!-- Step 2: Lobby — share Room ID before start -->
@@ -122,6 +134,6 @@
       </section>
     </main>
     <script src="js/config.js?v=2"></script>
-    <script src="game.js?v=15"></script>
+    <script src="game.js?v=16"></script>
   </body>
 </html>

@@ -27,6 +27,12 @@ function showScreen(id){screens.forEach(s=>$(`#${s}`)?.classList.toggle('hidden'
 function isHost(){return room?.hostId===playerId}
 function playerName(){return $('#playerName').value.trim()||'Player'}
 function pause(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
+function withTimeout(task,ms,message){
+  return Promise.race([
+    task,
+    new Promise(function(_,reject){setTimeout(function(){reject(new Error(message||'Request timed out.'))},ms)})
+  ]);
+}
 function generateNumericRoomCode(){
   var value;
   if(window.crypto?.getRandomValues){var values=new Uint32Array(1);window.crypto.getRandomValues(values);value=values[0]}
@@ -35,6 +41,16 @@ function generateNumericRoomCode(){
 }
 function showStartError(msg){$('#inviteNote').textContent=msg}
 function showLobbyNote(msg){$('#lobbyNote').textContent=msg}
+function setRoomCreating(active,message){
+  var btn=$('#startGame'),status=$('#roomCreationStatus');
+  if(!btn||!status)return;
+  btn.disabled=active;
+  btn.classList.toggle('is-creating',active);
+  $('.create-room-label').textContent=active?'Creating room':'Create room';
+  status.classList.toggle('is-visible',active);
+  status.setAttribute('aria-hidden',String(!active));
+  if(message)$('#roomCreationMessage').textContent=message;
+}
 function cleanCategoryIcon(slug,icon){return !icon||/[ÃÂïð]/.test(icon)?(categoryIcons[slug]||'🎯'):icon}
 function catInfo(){return categories[category]||{title:category,icon:'❓'}}
 
@@ -157,25 +173,41 @@ async function copyText(text,noteEl,successMsg){
 // Step 1: Create room
 async function createRoom(){
   var btn=$('#startGame');
+  if(btn.disabled)return;
   if(!category){showStartError('Please choose a category.');return}
-  btn.disabled=true;
+  setRoomCreating(true,'Connecting to the game server');
+  var progressTimer=setTimeout(function(){setRoomCreating(true,'Almost there — preparing your lobby')},1400);
   showStartError('');
   try{
-    var d=await api('create',{name:playerName(),category:category});
+    // A slow Vercel/TiDB function must never trap the button in a permanent
+    // loading state. After a short wait, open a playable local room instead.
+    var d=await withTimeout(
+      api('create',{name:playerName(),category:category}),
+      3000,
+      'Online room took too long to start.'
+    );
     roomCode=d.roomCode;
     playerId=d.playerId;
     localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
+    setRoomCreating(true,'Room ready — opening the lobby');
+    await pause(220);
     // Show the Room Created lobby on every device before a host starts.
     // This gives phone players a chance to share or copy the Room ID too.
     enterLobby(d.state);
   }catch(e){
-    if(window.GIZMO?.isVercel){startOfflineRoom();return}
+    if(window.GIZMO?.isVercel){
+      startOfflineRoom('Quick-play room created because the online room is taking too long.');
+      return;
+    }
     showStartError(e.message)
   }
-  finally{btn.disabled=false}
+  finally{
+    clearTimeout(progressTimer);
+    setRoomCreating(false);
+  }
 }
 
-function startOfflineRoom(){
+function startOfflineRoom(note){
   roomCode=generateNumericRoomCode();
   playerId='local-player';
   questions=offlineWorldQuestions.map(q=>({...q}));
@@ -183,6 +215,7 @@ function startOfflineRoom(){
   room={status:'lobby',offline:true,category:category,hostId:playerId,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
   localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
   enterLobby({room:room});
+  if(note)showLobbyNote(note);
 }
 
 // Step 2: Lobby — share Room ID

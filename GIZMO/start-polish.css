@@ -9,4 +9,22 @@
 .duel-start .duel-rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0 24px; }
 .duel-start .duel-rules span { display: flex; justify-content: center; align-items: center; min-height: 38px; padding: 7px 9px; background: #eef0ff; color: #4b3fca; font-size: 12px; animation: none; }
 .duel-start #startGame { min-height: 60px; border-radius: 16px !important; }
+.duel-start #startGame:disabled { cursor: wait !important; opacity: 1 !important; transform: none !important; background: linear-gradient(135deg, #6558ef, #4438cb) !important; }
+.create-room-spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.38); border-top-color: #fff; border-radius: 50%; animation: createRoomSpin .7s linear infinite; }
+#startGame.is-creating .create-room-arrow { display: none; }
+#startGame.is-creating .create-room-spinner { display: inline-block; }
+.room-creation-status { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 13px; max-height: 0; margin: 0; padding: 0 16px; overflow: hidden; opacity: 0; border: 1px solid transparent; border-radius: 16px; text-align: left; transform: translateY(8px); transition: max-height .28s ease, margin .28s ease, padding .28s ease, opacity .2s ease, transform .28s ease; }
+.room-creation-status.is-visible { max-height: 90px; margin: 12px 0 0; padding: 12px 16px; opacity: 1; border-color: #ddd9ff; background: linear-gradient(135deg, #f5f3ff, #eef2ff); transform: translateY(0); }
+.room-creation-orbit { display: grid; place-items: center; width: 46px; height: 46px; border: 2px dashed #8b80ee; border-radius: 50%; animation: createRoomSpin 3s linear infinite; }
+.room-creation-orbit i { font-style: normal; font-size: 23px; animation: createRoomSpin 3s linear infinite reverse; }
+.room-creation-copy { display: flex; min-width: 0; flex-direction: column; line-height: 1.25; }
+.room-creation-copy strong { color: #282264; font-size: 14px; }
+.room-creation-copy small { margin-top: 3px; overflow: hidden; color: #6b7280; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.room-creation-dots { display: flex; gap: 3px; }
+.room-creation-dots i { width: 5px; height: 5px; border-radius: 50%; background: #5548d9; animation: createRoomDot .9s ease-in-out infinite alternate; }
+.room-creation-dots i:nth-child(2) { animation-delay: .15s; }
+.room-creation-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes createRoomSpin { to { transform: rotate(360deg); } }
+@keyframes createRoomDot { to { opacity: .25; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) { .create-room-spinner, .room-creation-orbit, .room-creation-orbit i, .room-creation-dots i { animation-duration: 1.8s; } }
 @media (max-width: 640px) { .duel-start { padding: 28px 20px 30px; } .duel-start .duel-rules { grid-template-columns: 1fr; } .duel-start .start-icon { width: 70px; height: 70px; margin-bottom: 16px; } }
