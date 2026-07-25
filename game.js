@@ -88,15 +88,17 @@ async function loadCategories(){
     {slug:'animals',title:'Animals',icon:'🐾'},{slug:'technology',title:'Technology',icon:'💻'},{slug:'math',title:'Math',icon:'🔢'},
     {slug:'literature',title:'Literature',icon:'📚'},{slug:'art',title:'Art',icon:'🎨'},{slug:'philippines',title:'Philippines',icon:'🇵🇭'}
   ];
+  // Render the local choices first so a slow Vercel request cannot leave this
+  // control stuck on "Loading categories…".
+  renderCategorySelect(fallback);
   try{
-    var d=await quizApi('categories');
+    var d=await Promise.race([
+      quizApi('categories'),
+      new Promise(function(_,reject){setTimeout(function(){reject(new Error('Category request timed out.'))},2500)})
+    ]);
     var list=d.categories?.length?d.categories:fallback;
-    if(!category||!list.some(function(c){return c.slug===category}))category=list[0]?.slug||'world';
     renderCategorySelect(list);
-  }catch(e){
-    category='world';
-    renderCategorySelect(fallback);
-  }
+  }catch(e){}
 }
 
 async function ensureQuestions(slug){
