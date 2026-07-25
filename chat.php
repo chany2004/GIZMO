@@ -12,10 +12,11 @@ if ($message === '') {
 $apiKey = gizmo_ai_key();
 
 if (!$apiKey) {
-    json_reply([
-        'reply' => "I am Gizmo AI! 🤖 To activate my ChatGPT brain, please add a Free AI API key (Google Gemini or Groq) at setup_ai.php.",
-        'mode'  => 'offline',
-    ]);
+    $groqKey = trim(gizmo_env('GROQ_API_KEY'));
+    $setupHint = $groqKey === ''
+        ? 'GROQ_API_KEY is missing in Vercel Environment Variables. Add it, then redeploy.'
+        : 'GROQ_API_KEY was found but is invalid. Use a value starting with gsk_, with no quotes or spaces.';
+    json_reply(['reply' => "Gizmo AI is offline. {$setupHint}", 'mode' => 'offline']);
 }
 
 if (!function_exists('curl_init')) {
