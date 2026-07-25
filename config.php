@@ -120,18 +120,36 @@ function gizmo_db(): PDO
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES   => false,
                 ];
-                // TiDB Cloud requires TLS. Store the CA certificate as Base64 in
-                // Vercel, then create a temporary certificate file per runtime.
-                if (DB_SSL_CA_BASE64 !== '' && defined('PDO::MYSQL_ATTR_SSL_CA')) {
-                    $caPath = sys_get_temp_dir() . '/gizmo-tidb-ca.pem';
-                    if (!is_file($caPath)) {
-                        $ca = base64_decode(DB_SSL_CA_BASE64, true);
-                        if ($ca === false) throw new PDOException('DB_SSL_CA_BASE64 is not valid Base64.');
-                        file_put_contents($caPath, $ca, LOCK_EX);
+                // TiDB Cloud only accepts TLS. Prefer an optional CA supplied
+                // through Vercel, otherwise use the trusted CA bundle included
+                // by the Vercel Linux runtime (TiDB uses Let's Encrypt).
+                if (defined('PDO::MYSQL_ATTR_SSL_CA')) {
+                    $caPath = '';
+                    if (DB_SSL_CA_BASE64 !== '') {
+                        $caPath = sys_get_temp_dir() . '/gizmo-tidb-ca.pem';
+                        if (!is_file($caPath)) {
+                            $ca = base64_decode(DB_SSL_CA_BASE64, true);
+                            if ($ca === false) throw new PDOException('DB_SSL_CA_BASE64 is not valid Base64.');
+                            file_put_contents($caPath, $ca, LOCK_EX);
+                        }
+                    } elseif (DB_HOST !== 'localhost' && DB_HOST !== '127.0.0.1') {
+                        foreach ([
+                            '/etc/pki/tls/certs/ca-bundle.crt',
+                            '/etc/ssl/cert.pem',
+                            '/etc/ssl/certs/ca-certificates.crt',
+                        ] as $systemCa) {
+                            if (is_readable($systemCa)) {
+                                $caPath = $systemCa;
+                                break;
+                            }
+                        }
                     }
-                    $options[PDO::MYSQL_ATTR_SSL_CA] = $caPath;
-                    if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
-                        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+
+                    if ($caPath !== '') {
+                        $options[PDO::MYSQL_ATTR_SSL_CA] = $caPath;
+                        if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
+                            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+                        }
                     }
                 }
                 $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
