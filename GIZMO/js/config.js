@@ -2,108 +2,113 @@
  * GIZMO — API Configuration
  * Auto-detects environment (Vercel vs XAMPP) and provides fallback
  * 
- * Vercel = static hosting (no PHP/MySQL) → localStorage fallback
- * XAMPP = full stack (PHP + MySQL) → real API
+ * Vercel = static hosting (no PHP/MySQL) -> localStorage fallback
+ * XAMPP = full stack (PHP + MySQL) -> real API
  */
 
 (function() {
-  const GIZMO = window.GIZMO = window.GIZMO || {};
+  var GIZMO = window.GIZMO = window.GIZMO || {};
 
   // Detect if running on Vercel (no PHP backend)
   GIZMO.isVercel = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && !location.hostname.includes('192.168');
   
-  // Detect if we can reach the backend
   GIZMO.backendAvailable = false;
+  // Vercel deploys api/index.php at /api; XAMPP uses the root PHP router.
+  GIZMO.apiBase = GIZMO.isVercel ? '/api' : 'api.php';
 
-  // API base URL
-  GIZMO.apiBase = GIZMO.isVercel ? '/api.php' : 'api.php';
+  // Safe parse: read text first, handle empty responses
+  function safeJson(r) {
+    return r.text().then(function(text) {
+      if (!text || !text.trim()) throw new Error('The server returned an empty response. Check the Vercel Function logs.');
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error('The Vercel API did not return JSON. Check the Function logs and database environment variables.');
+      }
+    });
+  }
+
+  // Merge helper (avoids spread operator for older browsers)
+  function merge(obj1, obj2) {
+    var result = {};
+    for (var k in obj1) { if (obj1.hasOwnProperty(k)) result[k] = obj1[k]; }
+    for (var k in obj2) { if (obj2.hasOwnProperty(k)) result[k] = obj2[k]; }
+    return result;
+  }
 
   // Unified API caller with fallback
-  GIZMO.api = async function(endpoint, data = {}) {
+  GIZMO.api = async function(endpoint, data) {
+    if (!data) data = {};
     data.endpoint = endpoint;
     try {
-      const r = await fetch(GIZMO.apiBase, {
+      var r = await fetch(GIZMO.apiBase, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      const d = await r.json();
+      var d = await safeJson(r);
       if (!r.ok || d.error) throw new Error(d.error || 'Request failed');
       GIZMO.backendAvailable = true;
       return d;
     } catch (e) {
-      // Backend unavailable — use localStorage fallback
       GIZMO.backendAvailable = false;
       
       // Try direct PHP file as fallback (XAMPP local)
-      const phpCandidates = [
-        `${endpoint}.php`,
-        `${endpoint}/${endpoint}.php`
-      ];
-      
-      for (const phpFile of phpCandidates) {
+      var phpCandidates = [endpoint+'.php', endpoint+'/'+endpoint+'.php'];
+      for (var i = 0; i < phpCandidates.length; i++) {
         try {
-          const r = await fetch(phpFile, {
+          var r = await fetch(phpCandidates[i], {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
           });
           if (r.ok) {
-            const d = await r.json();
+            var d = await safeJson(r);
             if (!d.error) {
               GIZMO.backendAvailable = true;
               return d;
             }
           }
-        } catch {}
+        } catch(err) {}
       }
-      
-      throw e; // Re-throw if all fallbacks fail
+      throw e;
     }
   };
 
-  // Auth API
-  GIZMO.authApi = function(action, body = {}) {
-    return GIZMO.api('auth', { action, ...body });
+  GIZMO.authApi = function(action, body) {
+    return GIZMO.api('auth', merge({ action: action }, body || {}));
   };
 
-  // Profile API
-  GIZMO.profileApi = function(action, body = {}) {
-    return GIZMO.api('profile', { action, ...body });
+  GIZMO.profileApi = function(action, body) {
+    return GIZMO.api('profile', merge({ action: action }, body || {}));
   };
 
-  // Quiz API
-  GIZMO.quizApi = function(action, body = {}) {
-    return GIZMO.api('quiz', { action, ...body });
+  GIZMO.quizApi = function(action, body) {
+    return GIZMO.api('quiz', merge({ action: action }, body || {}));
   };
 
-  // Multiplayer API
-  GIZMO.multiplayerApi = function(action, body = {}) {
-    return GIZMO.api('multiplayer', { action, ...body });
+  GIZMO.multiplayerApi = function(action, body) {
+    return GIZMO.api('multiplayer', merge({ action: action }, body || {}));
   };
 
-  // Study API
-  GIZMO.studyApi = function(action, body = {}) {
-    return GIZMO.api('study', { action, ...body });
+  GIZMO.studyApi = function(action, body) {
+    return GIZMO.api('study', merge({ action: action }, body || {}));
   };
 
-  // Chat API
-  GIZMO.chatApi = function(body = {}) {
-    return GIZMO.api('chat', body);
+  GIZMO.chatApi = function(body) {
+    return GIZMO.api('chat', body || {});
   };
 
-  // Check backend health
   GIZMO.checkBackend = async function() {
     try {
-      const d = await GIZMO.api('auth', { action: 'me', id: 'ping' });
+      await GIZMO.api('auth', { action: 'me', id: 'ping' });
       GIZMO.backendAvailable = true;
       return true;
-    } catch {
+    } catch(err) {
       GIZMO.backendAvailable = false;
       return false;
     }
   };
 
-  console.log(`🌐 GIZMO running on ${GIZMO.isVercel ? 'Vercel' : 'XAMPP'} (backend: ${GIZMO.backendAvailable ? 'online' : 'offline'})`);
+  console.log('GIZMO running on ' + (GIZMO.isVercel ? 'Vercel' : 'XAMPP'));
 })();
-

@@ -1,3 +1,169 @@
-(function(){var c=[],s=false;function w(){if(document.getElementById('gizmoAiWindow'))return;var d=document.createElement('div');d.innerHTML='<button class="gizmo-ai-launcher" id="gizmoAiLauncher" type="button" aria-label="Open Gizmo AI Chat"><span class="bot-icon">🤖</span><span>Ask Gizmo AI</span><span class="live-pulse"></span></button><div class="gizmo-ai-window hidden" id="gizmoAiWindow" role="dialog" aria-label="Gizmo AI Assistant"><div class="ai-chat-header"><div class="ai-header-info"><div class="ai-avatar">🤖</div><div class="ai-title-wrap"><strong>Gizmo ChatGPT AI</strong><small id="aiProviderBadge">Active &amp; Ready ⚡</small></div><button class="ai-close-btn" id="gizmoAiClose" type="button" aria-label="Close AI Chat">&#10005;</button></div><div class="ai-chat-body" id="aiChatBody"><div class="chat-bubble ai">Hello! I am <strong>Gizmo AI</strong> 🤖. Ask me anything! I can explain complex topics, answer trivia, give study tips, or help you learn.<div class="chat-suggestions"><button class="chip-btn" data-prompt="Explain Quantum Physics simply">💡 Quantum Physics</button><button class="chip-btn" data-prompt="Give me 5 best study tips for exams">📝 Study Tips</button><button class="chip-btn" data-prompt="What is the difference between DNA and RNA?">🧪 DNA vs RNA</button></div></div><div class="ai-chat-footer"><form class="chat-form" id="aiChatForm"><input id="aiChatInput" type="text" placeholder="Ask Gizmo AI a question..." maxlength="2000" autocomplete="off" required><button class="chat-send-btn" id="aiChatSend" type="submit">Send ➔</button></form></div>';document.body.appendChild(d);b()}function b(){var l=document.getElementById('gizmoAiLauncher'),w=document.getElementById('gizmoAiWindow'),cx=document.getElementById('gizmoAiClose'),f=document.getElementById('aiChatForm'),i=document.getElementById('aiChatInput'),bd=document.getElementById('aiChatBody');l.addEventListener('click',function(){w.classList.toggle('hidden');if(!w.classList.contains('hidden'))i.focus()});cx.addEventListener('click',function(){w.classList.add('hidden')});bd.addEventListener('click',function(e){var ch=e.target.closest('.chip-btn');if(ch&&ch.dataset.prompt){i.value=ch.dataset.prompt;f.dispatchEvent(new Event('submit'))}});f.addEventListener('submit',async function(e){e.preventDefault();var m=i.value.trim();if(!m||s)return;a(m,'user');i.value='';s=true;var sb=document.getElementById('aiChatSend');sb.disabled=true;sb.textContent='Thinking…';var tb=a('Thinking… 🤖','ai typing');try{var resp,data;try{resp=await fetch('chat.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m,history:c})});var txt=await resp.text();data=txt?JSON.parse(txt):{}}catch(er){resp=await fetch('api.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:'chat',message:m,history:c})});txt=await resp.text();data=txt?JSON.parse(txt):{}}tb.remove();if(!resp.ok||data.error){a(data.error||'AI offline. Set up AI key.','ai')}else{a(data.reply,'ai');if(data.provider)document.getElementById('aiProviderBadge').textContent=data.provider+' ⚡';c.push({role:'user',content:m});c.push({role:'assistant',content:data.reply})}}catch(er){tb.remove();a('AI needs a backend. Widget still works offline!','ai')}finally{s=false;sb.disabled=false;sb.textContent='Send ➔'}})}function a(t,ty){var bd=document.getElementById('aiChatBody'),b=document.createElement('div');b.className='chat-bubble '+ty;if(ty.indexOf('ai')!==-1&&ty.indexOf('typing')===-1){b.innerHTML=t.replace(/&/g,'&amp;').replace(/</g,'<').replace(/>/g,'>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}else b.textContent=t;bd.appendChild(b);bd.scrollTop=bd.scrollHeight;return b}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',w);else w()})();</｜parameter>
-</invoke>
-</｜tool_calls>
+/* GIZMO — AI Chat Assistant Widget */
+
+(function () {
+  var chatHistory = [];
+  var isSending = false;
+
+  function injectChatWidget() {
+    if (document.getElementById('gizmoAiWindow')) return;
+
+    var d = document.createElement('div');
+    d.innerHTML =
+      '<button class="gizmo-ai-launcher" id="gizmoAiLauncher" type="button" aria-label="Open Gizmo AI Chat">' +
+        '<span class="bot-icon">🤖</span>' +
+        '<span>Ask Gizmo AI</span>' +
+        '<span class="live-pulse"></span>' +
+      '</button>' +
+      '<div class="gizmo-ai-window hidden" id="gizmoAiWindow" role="dialog" aria-label="Gizmo AI Assistant">' +
+        '<div class="ai-chat-header">' +
+          '<div class="ai-header-info">' +
+            '<div class="ai-avatar">🤖</div>' +
+            '<div class="ai-title-wrap">' +
+              '<strong>Gizmo ChatGPT AI</strong>' +
+              '<small id="aiProviderBadge">Active &amp; Ready ⚡</small>' +
+            '</div>' +
+          '</div>' +
+          '<button class="ai-close-btn" id="gizmoAiClose" type="button" aria-label="Close AI Chat">&#10005;</button>' +
+        '</div>' +
+        '<div class="ai-chat-body" id="aiChatBody">' +
+          '<div class="chat-bubble ai">' +
+            'Hello! I am <strong>Gizmo AI</strong> 🤖. Ask me anything! I can explain complex topics, answer trivia, give study tips, or help you learn.' +
+            '<div class="chat-suggestions">' +
+              '<button class="chip-btn" data-prompt="Explain Quantum Physics simply">💡 Quantum Physics</button>' +
+              '<button class="chip-btn" data-prompt="Give me 5 best study tips for exams">📝 Study Tips</button>' +
+              '<button class="chip-btn" data-prompt="What is the difference between DNA and RNA?">🧪 DNA vs RNA</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ai-chat-footer">' +
+          '<form class="chat-form" id="aiChatForm">' +
+            '<input id="aiChatInput" type="text" placeholder="Ask Gizmo AI a question..." maxlength="2000" autocomplete="off" required>' +
+            '<button class="chat-send-btn" id="aiChatSend" type="submit">Send ➔</button>' +
+          '</form>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(d);
+    bindEvents();
+  }
+
+  function bindEvents() {
+    var launcher = document.getElementById('gizmoAiLauncher');
+    var windowEl = document.getElementById('gizmoAiWindow');
+    var closeBtn = document.getElementById('gizmoAiClose');
+    var form = document.getElementById('aiChatForm');
+    var input = document.getElementById('aiChatInput');
+    var body = document.getElementById('aiChatBody');
+
+    if (!launcher || !windowEl || !closeBtn || !form || !input || !body) return;
+
+    launcher.addEventListener('click', function () {
+      windowEl.classList.toggle('hidden');
+      if (!windowEl.classList.contains('hidden')) input.focus();
+    });
+
+    closeBtn.addEventListener('click', function () {
+      windowEl.classList.add('hidden');
+    });
+
+    body.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip-btn');
+      if (chip && chip.dataset.prompt) {
+        input.value = chip.dataset.prompt;
+        form.dispatchEvent(new Event('submit'));
+      }
+    });
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var message = input.value.trim();
+      if (!message || isSending) return;
+
+      appendBubble(message, 'user');
+      input.value = '';
+      isSending = true;
+
+      var sendBtn = document.getElementById('aiChatSend');
+      if (!sendBtn) return;
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Thinking…';
+
+      var typingBubble = appendBubble('Thinking… 🤖', 'ai typing');
+
+      try {
+        var resp, data, txt;
+
+        // Try chat.php directly
+        try {
+          resp = await fetch('chat.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message, history: chatHistory })
+          });
+          txt = await resp.text();
+          data = txt ? JSON.parse(txt) : {};
+        } catch (innerErr) {
+          // Fallback to api.php
+          resp = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint: 'chat', message: message, history: chatHistory })
+          });
+          txt = await resp.text();
+          data = txt ? JSON.parse(txt) : {};
+        }
+
+        if (typingBubble && typingBubble.parentNode) typingBubble.remove();
+
+        if (!resp.ok || data.error) {
+          appendBubble(data && data.error ? data.error : 'AI is offline. Set up an API key in setup_ai.php.', 'ai');
+        } else {
+          appendBubble(data.reply, 'ai');
+          if (data.provider) {
+            var badge = document.getElementById('aiProviderBadge');
+            if (badge) badge.textContent = data.provider + ' ⚡';
+          }
+          chatHistory.push({ role: 'user', content: message });
+          chatHistory.push({ role: 'assistant', content: data.reply });
+        }
+      } catch (err) {
+        if (typingBubble && typingBubble.parentNode) typingBubble.remove();
+        appendBubble('AI needs a backend connection. The chat button still shows!', 'ai');
+      } finally {
+        isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send ➔';
+      }
+    });
+  }
+
+  function appendBubble(text, type) {
+    var body = document.getElementById('aiChatBody');
+    if (!body) return null;
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ' + type;
+
+    if (type.indexOf('ai') !== -1 && type.indexOf('typing') === -1) {
+      var formatted = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      bubble.innerHTML = formatted;
+    } else {
+      bubble.textContent = text;
+    }
+
+    body.appendChild(bubble);
+    body.scrollTop = body.scrollHeight;
+    return bubble;
+  }
+
+  // Auto initialize on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectChatWidget);
+  } else {
+    injectChatWidget();
+  }
+})();

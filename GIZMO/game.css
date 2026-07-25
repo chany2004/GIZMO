@@ -577,3 +577,84 @@
     width: 100% !important;
   }
 }
+
+/* Quiz answers: explicit card styles placed after the global button reset. */
+.duel-shell .trivia-board {
+  margin-top: 26px;
+  gap: 14px;
+}
+
+.duel-shell .answer {
+  display: grid !important;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 76px !important;
+  margin: 0 !important;
+  padding: 16px 18px !important;
+  border: 2px solid #dfe5f0 !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  color: #172044 !important;
+  font: 700 16px "DM Sans", sans-serif !important;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.045) !important;
+}
+
+.duel-shell .answer .answer-letter {
+  margin: 0;
+}
+
+.duel-shell .answer:hover:not(:disabled) {
+  border-color: #818cf8 !important;
+  background: #f8faff !important;
+  transform: none !important;
+}
+
+.duel-shell .answer-next {
+  width: auto !important;
+  min-width: 180px;
+  margin: 18px auto 0 !important;
+}
+
+/* The general .button rule is display:flex!important, so give hidden quiz buttons priority. */
+.play-page .button.hidden {
+  display: none !important;
+}
+
+/* Keep the live leaderboard steady while scores refresh. */
+.duel-shell .leaderboard,
+.duel-shell .leaderboard li,
+.duel-shell .leaderboard li:hover {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+.duel-shell .leaderboard li:hover {
+  background: #f8fafc;
+}
+
+/* Keep the answer board completely still while playing. */
+.duel-shell .answer,
+.duel-shell .answer:hover,
+.duel-shell .answer:active,
+.duel-shell .answer.correct,
+.duel-shell .answer.wrong,
+.duel-shell .answer::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+@media (max-width: 640px) {
+  .duel-shell .trivia-board { gap: 10px; }
+  .duel-shell .answer {
+    min-height: 60px !important;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    padding: 13px 14px !important;
+    font-size: 14px !important;
+  }
+}

@@ -1,0 +1,12 @@
+/* Focused, static create-room screen. */
+.duel-start { width: min(100%, 680px); padding: 38px 46px 42px; border-radius: 26px; border: 1px solid #e8e3f7; box-shadow: 0 22px 50px rgba(52, 43, 112, 0.12); }
+.duel-start .eyebrow { margin-bottom: 12px; }
+.duel-start .start-icon { width: 76px; height: 76px; margin: 0 auto 20px; border-radius: 23px; background: linear-gradient(145deg, #fff0a6, #f9d55a); box-shadow: 0 10px 0 #edc342, 0 16px 28px rgba(224, 169, 39, 0.17); animation: none; }
+.duel-start h1 { margin: 0 auto 10px; letter-spacing: -1.2px; }
+.duel-start .game-help { margin: 0 auto 28px; max-width: 520px; }
+.duel-start .player-name, .duel-start .setup-group { margin-top: 16px; }
+.duel-start .player-name input, .duel-start .category-select { min-height: 58px; background: #fbfcff !important; border-color: #dce3ee !important; }
+.duel-start .duel-rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0 24px; }
+.duel-start .duel-rules span { display: flex; justify-content: center; align-items: center; min-height: 38px; padding: 7px 9px; background: #eef0ff; color: #4b3fca; font-size: 12px; animation: none; }
+.duel-start #startGame { min-height: 60px; border-radius: 16px !important; }
+@media (max-width: 640px) { .duel-start { padding: 28px 20px 30px; } .duel-start .duel-rules { grid-template-columns: 1fr; } .duel-start .start-icon { width: 70px; height: 70px; margin-bottom: 16px; } }

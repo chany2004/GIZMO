@@ -1105,3 +1105,116 @@ kbd {
     font-size: 15px !important;
   }
 }
+
+/* Clean editor system: one quiet hierarchy, with colour reserved for focus and primary actions. */
+.cards-editor { gap: 12px; }
+
+.card-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: none;
+  animation: none;
+}
+
+.card-row:focus-within {
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  transform: none;
+}
+
+.card-row-header {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.card-number-tag {
+  padding: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.card-row-actions { gap: 4px; }
+
+.row-action-btn,
+.row-action-btn.duplicate-btn,
+.row-action-btn.delete-btn {
+  background: transparent !important;
+  color: #64748b !important;
+  padding: 7px 9px !important;
+}
+
+.row-action-btn:hover,
+.row-action-btn.duplicate-btn:hover {
+  background: #f1f5f9 !important;
+  color: #4338ca !important;
+  transform: none;
+}
+
+.row-action-btn.delete-btn:hover {
+  background: #fff1f2 !important;
+  color: #e11d48 !important;
+  transform: none;
+}
+
+.card-inputs-grid { gap: 14px; }
+.card-input-col label,
+.card-input-col:first-child label,
+.card-input-col:last-child label {
+  color: #475569;
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+
+.card-input-col:first-child textarea,
+.card-input-col:last-child textarea,
+.card-inputs-grid textarea {
+  border: 1px solid #dbe3ee !important;
+  background: #fff !important;
+  border-radius: 10px !important;
+  min-height: 88px !important;
+  padding: 12px 13px !important;
+  font-size: 14px !important;
+}
+
+.card-input-col:first-child textarea:focus,
+.card-input-col:last-child textarea:focus,
+.card-inputs-grid textarea:focus {
+  border-color: #818cf8 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .card-row { padding: 16px; }
+  .card-row-header { margin-bottom: 14px; padding-bottom: 12px; }
+  .card-inputs-grid { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* Builder polish: compact, predictable controls on small screens. */
+@media (max-width: 640px) {
+  .study-page { background: #f4f1ff; animation: none; }
+  .study-wrap { width: min(100% - 20px, 820px); margin: 16px auto 40px; }
+  .builder { padding: 26px 18px 22px; border-radius: 22px; box-shadow: 0 14px 32px rgba(67, 56, 202, 0.1); }
+  .builder-header h1 { font-size: 31px; letter-spacing: -1px; margin: 4px 0 10px; }
+  .builder-intro { font-size: 15px; margin: 0 0 24px; }
+  .field-group { margin-bottom: 20px; }
+  .source-tabs { margin-bottom: 24px; }
+  .editor-toolbar { align-items: stretch; margin-bottom: 14px; }
+  .toolbar-left { justify-content: space-between; }
+  .toolbar-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .toolbar-actions .btn-subtle, .toolbar-actions .btn-accent { width: 100%; padding: 11px 8px !important; }
+  .toolbar-actions .btn-accent { grid-column: 1 / -1; }
+  .cards-editor { gap: 14px; }
+  .card-row { padding: 15px; border-radius: 17px; }
+  .card-row-header { flex-direction: row; align-items: center; margin-bottom: 13px; padding-bottom: 11px; }
+  .card-row-actions { width: auto; gap: 6px; }
+  .row-action-btn { padding: 7px 9px !important; }
+  .card-inputs-grid { gap: 12px; }
+  .card-inputs-grid textarea { min-height: 84px !important; padding: 12px !important; }
+  .editor-bottom-bar { margin-top: 14px; }
+  .builder-footer { margin-top: 22px; }
+}
