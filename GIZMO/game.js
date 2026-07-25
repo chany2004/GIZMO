@@ -4,6 +4,13 @@ let categories={},questions=[],questionCache={};
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
 $('#playerName').value=user?.name||'';
+const offlineWorldQuestions=[
+  {text:'What is the capital of Australia?',options:['Sydney','Melbourne','Canberra','Perth'],correct:2},
+  {text:'The pyramids of Giza are in which country?',options:['Mexico','Greece','Egypt','Italy'],correct:2},
+  {text:'Which is the largest ocean?',options:['Atlantic','Pacific','Indian','Arctic'],correct:1},
+  {text:'What is the smallest continent?',options:['Europe','Antarctica','Australia','South America'],correct:2},
+  {text:'Birds have which feature?',options:['Fur','Feathers','Scales','Shells'],correct:1}
+];
 
 const screens=['startScreen','lobbyScreen','quizScreen'];
 function showScreen(id){screens.forEach(s=>$(`#${s}`)?.classList.toggle('hidden',s!==id))}
@@ -111,8 +118,20 @@ async function createRoom(){
     playerId=d.playerId;
     localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
     enterLobby(d.state);
-  }catch(e){showStartError(e.message)}
+  }catch(e){
+    if(window.GIZMO?.isVercel){startOfflineGame();return}
+    showStartError(e.message)
+  }
   finally{btn.disabled=false}
+}
+
+function startOfflineGame(){
+  roomCode='LOCAL';
+  playerId='local-player';
+  questions=offlineWorldQuestions.map(q=>({...q}));
+  questionCache[category]=questions;
+  room={status:'started',offline:true,category:category,hostId:playerId,startedAt:Date.now()/1000,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
+  enterGame({room:room});
 }
 
 // Step 2: Lobby — share Room ID
@@ -181,7 +200,7 @@ async function enterGame(state){
   $('#resultActions').classList.add('hidden');
   $('#beginGame').disabled=false;
   await renderGame(state);
-  startPolling();
+  if(!room.offline)startPolling();
 }
 
 async function renderGame(state){
@@ -275,7 +294,7 @@ async function submitAnswer(answer,button){
   answerTransitioning=true;
   document.querySelectorAll('.answer').forEach(function(b){b.disabled=true});
   try{
-    var d=await api('answer',{round:currentRound,answer:answer});
+    var d=room?.offline?offlineAnswer(answer):await api('answer',{round:currentRound,answer:answer});
     var correctButton=document.querySelector('.answer[data-answer-index="'+d.correctAnswer+'"]');
     button.classList.add(d.correct?'correct':'wrong');
     if(correctButton&&!d.correct)correctButton.classList.add('correct');
@@ -295,6 +314,14 @@ async function submitAnswer(answer,button){
     pendingAnswerState=null;
     document.querySelectorAll('.answer').forEach(function(b){b.disabled=false});
   }
+}
+
+function offlineAnswer(answer){
+  var item=questions[currentRound],correct=item.correct===answer;
+  var player=room.players[0];
+  if(correct){player.streak=(player.streak||0)+1;player.correct=(player.correct||0)+1;player.score+=(100+((player.streak-1)*25))}else player.streak=0;
+  player.round=currentRound+1;
+  return {correct:correct,correctAnswer:item.correct,state:{room:room}};
 }
 
 function finish(){

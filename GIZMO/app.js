@@ -16,9 +16,32 @@ async function safeFetch(url, data) {
   }
 }
 const authApi = (action, body = {}) => {
-  if (window.GIZMO?.authApi) return window.GIZMO.authApi(action, body);
-  return safeFetch('auth.php', {action,...body});
+  const request=window.GIZMO?.authApi?window.GIZMO.authApi(action,body):safeFetch('auth.php',{action,...body});
+  return request.catch(async error=>{
+    if(window.GIZMO?.isVercel&&['register','login','me'].includes(action))return offlineAuth(action,body);
+    throw error;
+  });
 };
+async function offlineHash(value){
+  const data=new TextEncoder().encode(value);
+  if(window.crypto?.subtle){const digest=await crypto.subtle.digest('SHA-256',data);return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+  return btoa(unescape(encodeURIComponent(value)));
+}
+function offlineAccounts(){try{return JSON.parse(localStorage.getItem('gizmoOfflineAccounts')||'[]')}catch{return []}}
+async function offlineAuth(action,body){
+  const accounts=offlineAccounts();
+  if(action==='me'){const account=accounts.find(a=>a.id===body.id);if(!account)throw new Error('Local account not found.');return {user:{id:account.id,name:account.name,email:account.email,offline:true}}}
+  const email=(body.email||'').trim().toLowerCase(),password=body.password||'';
+  if(!email||password.length<6)throw new Error('Enter a valid email and password of at least 6 characters.');
+  const passwordHash=await offlineHash(password);
+  let account=accounts.find(a=>a.email===email);
+  if(action==='register'){
+    if(account)throw new Error('An account with this email already exists on this device.');
+    account={id:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),name:(body.name||email.split('@')[0]).slice(0,24),email,passwordHash};
+    accounts.push(account);localStorage.setItem('gizmoOfflineAccounts',JSON.stringify(accounts));
+  }else if(!account||account.passwordHash!==passwordHash)throw new Error('Incorrect local email or password.');
+  return {user:{id:account.id,name:account.name,email:account.email,offline:true}};
+}
 const profileApi = (action, body = {}) => {
   if (window.GIZMO?.profileApi) return window.GIZMO.profileApi(action, body);
   return safeFetch('profiles.php', {action,...body});
@@ -60,6 +83,4 @@ async function loadPeopleHome(){
 }
 if(peopleHome){loadPeopleHome();setInterval(loadPeopleHome,8000)}
 if(state.user?.id)setInterval(()=>authApi('me',{id:state.user.id}).then(d=>saveUser(d.user)).catch(()=>{}),8000)
-window.addEventListener('storage',e=>{if(e.key==='gizmoUser'||e.key==='gizmoPhotoVersion'){state.user=JSON.parse(localStorage.getItem('gizmoUser')||'null');renderUser();if(peopleHome)loadPeopleHome()}});</｜｜DSML｜｜parameter>
-</invoke>
-</｜｜DSML｜｜tool_calls>
+window.addEventListener('storage',e=>{if(e.key==='gizmoUser'||e.key==='gizmoPhotoVersion'){state.user=JSON.parse(localStorage.getItem('gizmoUser')||'null');renderUser();if(peopleHome)loadPeopleHome()}});
