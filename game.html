@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="trivia.css?v=3" />
-    <link rel="stylesheet" href="game.css?v=7" />
+    <link rel="stylesheet" href="game.css?v=8" />
     <link rel="stylesheet" href="start-polish.css?v=1" />
     <link rel="stylesheet" href="profile.css" />
     <link rel="stylesheet" href="lobby.css?v=2" />
@@ -86,6 +86,13 @@
 
       <!-- Step 3: Live game -->
       <section class="game-shell duel-shell hidden" id="quizScreen">
+        <div class="game-loading hidden" id="gameLoading" role="status" aria-live="polite">
+          <div class="game-loading-orbit" aria-hidden="true"><span>⚔️</span></div>
+          <p>GET READY</p>
+          <strong id="gameLoadingMessage">Loading your challenge…</strong>
+          <span class="game-loading-copy">Preparing the next brain battle</span>
+          <span class="game-loading-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        </div>
         <div class="game-top">
           <span id="gameKind">MULTIPLAYER TRIVIA</span>
           <strong><span class="timer">⏱ <b id="timer">20</b>s</span> &nbsp; Score: <b id="score">0</b></strong>
@@ -115,6 +122,6 @@
       </section>
     </main>
     <script src="js/config.js?v=2"></script>
-    <script src="game.js?v=13"></script>
+    <script src="game.js?v=14"></script>
   </body>
 </html>

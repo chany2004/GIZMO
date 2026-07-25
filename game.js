@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s);
-let category='world',roomCode='',playerId='',room=null,currentRound=0,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup';
+let category='world',roomCode='',playerId='',room=null,currentRound=0,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup',usingLocalQuestions=false,gameStarting=false;
 let categories={},questions=[],questionCache={};
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
@@ -16,6 +16,7 @@ const screens=['startScreen','lobbyScreen','quizScreen'];
 function showScreen(id){screens.forEach(s=>$(`#${s}`)?.classList.toggle('hidden',s!==id))}
 function isHost(){return room?.hostId===playerId}
 function playerName(){return $('#playerName').value.trim()||'Player'}
+function pause(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
 function generateNumericRoomCode(){
   var value;
   if(window.crypto?.getRandomValues){var values=new Uint32Array(1);window.crypto.getRandomValues(values);value=values[0]}
@@ -101,12 +102,39 @@ async function loadCategories(){
   }catch(e){}
 }
 
+function fallbackQuestions(){
+  return offlineWorldQuestions.map(function(q){
+    return {text:q.text,options:q.options.slice(),correct:q.correct};
+  });
+}
+
 async function ensureQuestions(slug){
-  if(questionCache[slug]){questions=questionCache[slug];category=slug;return}
-  var d=await quizApi('questions',{slug:slug});
-  questionCache[slug]=d.questions;
-  questions=d.questions;
+  if(questionCache[slug]?.length){questions=questionCache[slug];category=slug;return}
+  try{
+    // Never leave the game screen waiting forever for a slow cold start or
+    // unavailable hosted database. The local round keeps the game playable.
+    var d=await Promise.race([
+      quizApi('questions',{slug:slug}),
+      new Promise(function(_,reject){setTimeout(function(){reject(new Error('Question request timed out.'))},4000)})
+    ]);
+    if(!Array.isArray(d.questions)||!d.questions.length)throw new Error('No questions found.');
+    questionCache[slug]=d.questions;
+    usingLocalQuestions=false;
+  }catch(e){
+    questionCache[slug]=fallbackQuestions();
+    usingLocalQuestions=true;
+  }
+  questions=questionCache[slug];
   category=slug;
+}
+
+function setGameLoading(active,message){
+  var loader=$('#gameLoading');
+  var shell=$('#quizScreen');
+  if(!loader||!shell)return;
+  if(message)$('#gameLoadingMessage').textContent=message;
+  loader.classList.toggle('hidden',!active);
+  shell.classList.toggle('is-game-loading',active);
 }
 
 function roomInviteUrl(){var url=new URL(location.href);url.searchParams.set('room',roomCode);url.searchParams.delete('category');return url.href}
@@ -212,15 +240,33 @@ async function beginGame(){
 
 // Step 3: Live game
 async function enterGame(state){
+  if(gameStarting){
+    room=state.room;
+    return;
+  }
+  gameStarting=true;
   phase='playing';
   room=state.room;
   category=room.category;
+  clearInterval(poll);
+  clearInterval(clock);
+  poll=null;
+  clock=null;
   showScreen('quizScreen');
   $('#roomLabel').textContent='ROOM '+roomCode;
   $('#resultActions').classList.add('hidden');
   $('#beginGame').disabled=false;
-  await renderGame(state);
-  if(!room.offline)startPolling();
+  setGameLoading(true,'Loading your challenge…');
+  try{
+    // Keep the start screen visible briefly so the transition feels intentional,
+    // not like a frozen "Loading question" page.
+    await Promise.all([renderGame(state),pause(650)]);
+  }finally{
+    gameStarting=false;
+    setGameLoading(false);
+  }
+  if(!room.offline&&!usingLocalQuestions)startPolling();
+  else startClock();
 }
 
 async function renderGame(state){
@@ -314,7 +360,11 @@ async function submitAnswer(answer,button){
   answerTransitioning=true;
   document.querySelectorAll('.answer').forEach(function(b){b.disabled=true});
   try{
-    var d=room?.offline?offlineAnswer(answer):await api('answer',{round:currentRound,answer:answer});
+    // If the hosted question catalog timed out, continue with the matching
+    // local practice round instead of sending mismatched answers to the API.
+    var d=(room?.offline||usingLocalQuestions)
+      ?offlineAnswer(answer)
+      :await api('answer',{round:currentRound,answer:answer});
     var correctButton=document.querySelector('.answer[data-answer-index="'+d.correctAnswer+'"]');
     button.classList.add(d.correct?'correct':'wrong');
     if(correctButton&&!d.correct)correctButton.classList.add('correct');
@@ -338,7 +388,7 @@ async function submitAnswer(answer,button){
 
 function offlineAnswer(answer){
   var item=questions[currentRound],correct=item.correct===answer;
-  var player=room.players[0];
+  var player=room.players.find(function(p){return p.id===playerId})||room.players[0];
   if(correct){player.streak=(player.streak||0)+1;player.correct=(player.correct||0)+1;player.score+=(100+((player.streak-1)*25))}else player.streak=0;
   player.round=currentRound+1;
   return {correct:correct,correctAnswer:item.correct,state:{room:room}};
@@ -350,7 +400,7 @@ function finish(){
   $('#progressBar').style.width='100%';
   $('#timer').textContent='0';
   $('#gameBoard').innerHTML='';
-  var winner=room.players[0];
+  var winner=room.players.slice().sort(function(a,b){return (b.score||0)-(a.score||0)})[0];
   $('#gameTitle').textContent=winner?.id===playerId?'You are the winner!':'Game finished!';
   $('#gameInstruction').textContent=(winner?.name||'Player')+' has the highest score: '+(winner?.score||0)+' points.';
   $('#answerNote').textContent='Final scoreboard is shown below.';
@@ -358,10 +408,8 @@ function finish(){
 }
 
 // Polling
-function startPolling(){
-  clearInterval(poll);clearInterval(clock);
-  var ms=phase==='lobby'?1000:2500;
-  poll=setInterval(function(){api('state').then(function(d){handleState(d.state)}).catch(function(){})},ms);
+function startClock(){
+  clearInterval(clock);
   clock=setInterval(function(){
     if(phase!=='playing'||room?.status!=='started')return;
     // Each player gets a fresh 20-second timer for every question.
@@ -370,6 +418,13 @@ function startPolling(){
     var remaining=20-((Date.now()-questionStartedAt)/1000);
     $('#timer').textContent=Math.max(0,Math.ceil(remaining));
   },500);
+}
+
+function startPolling(){
+  clearInterval(poll);
+  var ms=phase==='lobby'?1000:2500;
+  poll=setInterval(function(){api('state').then(function(d){handleState(d.state)}).catch(function(){})},ms);
+  startClock();
 }
 
 // Events
