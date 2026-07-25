@@ -15,7 +15,6 @@ const offlineWorldQuestions=[
 const screens=['startScreen','lobbyScreen','quizScreen'];
 function showScreen(id){screens.forEach(s=>$(`#${s}`)?.classList.toggle('hidden',s!==id))}
 function isHost(){return room?.hostId===playerId}
-function shouldAutoStartOnMobile(){return !!(window.matchMedia&&window.matchMedia('(max-width: 760px)').matches)}
 function playerName(){return $('#playerName').value.trim()||'Player'}
 function showStartError(msg){$('#inviteNote').textContent=msg}
 function showLobbyNote(msg){$('#lobbyNote').textContent=msg}
@@ -115,7 +114,7 @@ async function createRoom(){
   if(!category){showStartError('Please choose a category.');return}
   // A Vercel deployment can run immediately without a PHP/MySQL backend.
   // Start a browser-local practice room instead of waiting for an API response.
-  if(window.GIZMO?.isVercel){startOfflineGame();return}
+  if(window.GIZMO?.isVercel){startOfflineRoom();return}
   btn.disabled=true;
   showStartError('');
   try{
@@ -123,29 +122,23 @@ async function createRoom(){
     roomCode=d.roomCode;
     playerId=d.playerId;
     localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
-    // Phone players usually want a quick solo round. Start immediately there;
-    // desktop keeps the shareable Room ID lobby for multiplayer sessions.
-    if(shouldAutoStartOnMobile()){
-      var started=await api('start');
-      enterGame(started.state);
-    }else{
-      enterLobby(d.state);
-    }
+    // Show the Room Created lobby on every device before a host starts.
+    // This gives phone players a chance to share or copy the Room ID too.
+    enterLobby(d.state);
   }catch(e){
-    if(window.GIZMO?.isVercel){startOfflineGame();return}
+    if(window.GIZMO?.isVercel){startOfflineRoom();return}
     showStartError(e.message)
   }
   finally{btn.disabled=false}
 }
 
-function startOfflineGame(){
+function startOfflineRoom(){
   roomCode='LOCAL';
   playerId='local-player';
   questions=offlineWorldQuestions.map(q=>({...q}));
   questionCache[category]=questions;
-  room={status:'started',offline:true,category:category,hostId:playerId,startedAt:Date.now()/1000,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
-  showStartError('Practice mode: this game runs locally in your browser.');
-  enterGame({room:room});
+  room={status:'lobby',offline:true,category:category,hostId:playerId,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
+  enterLobby({room:room});
 }
 
 // Step 2: Lobby — share Room ID
@@ -166,8 +159,10 @@ function enterLobby(state){
   $('#waitForHost').classList.toggle('hidden',host);
   showLobbyNote('');
   renderLobby(state);
-  startPolling();
-  api('state').then(function(d){handleState(d.state)}).catch(function(){});
+  if(!room.offline){
+    startPolling();
+    api('state').then(function(d){handleState(d.state)}).catch(function(){});
+  }
 }
 
 function renderLobby(state){
@@ -195,6 +190,11 @@ function renderLobby(state){
 }
 
 async function beginGame(){
+  if(room?.offline){
+    room.status='started';
+    enterGame({room:room});
+    return;
+  }
   var btn=$('#beginGame');
   btn.disabled=true;
   showLobbyNote('Starting game…');
