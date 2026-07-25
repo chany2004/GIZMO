@@ -81,6 +81,7 @@ if ($action === 'generateCards') {
             CURLOPT_POSTFIELDS => json_encode($payload),
             CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $apiKey],
             CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 8,
             CURLOPT_TIMEOUT => 30,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => 0,
@@ -94,6 +95,18 @@ if ($action === 'generateCards') {
         $resp = json_decode((string) $raw, true);
         if ($raw === false || $status < 200 || $status >= 300) {
             $msg = $resp['error']['message'] ?? ($curlErr ?: 'Groq AI API request failed.');
+            // DNS or connectivity can be unavailable on local XAMPP installations.
+            // Keep the study flow usable by drafting cards from the supplied notes.
+            if (stripos($msg, 'resolve host') !== false || stripos($msg, 'could not connect') !== false || stripos($msg, 'timed out') !== false) {
+                $cards = gizmo_local_flashcards($material, $count);
+                if (count($cards) >= 2) {
+                    json_reply([
+                        'cards' => $cards,
+                        'mode' => 'local-fallback',
+                        'message' => 'Groq is unreachable on this network, so Gizmo drafted cards locally from your notes.',
+                    ]);
+                }
+            }
             json_reply(['error' => 'Groq AI Error: ' . $msg], 502);
         }
 

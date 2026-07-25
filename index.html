@@ -9,14 +9,20 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-    <style>.flashcard-home-button{border:2px solid #7769d5;border-radius:13px;padding:13px 16px;color:#4d409f;background:#fffaf1;text-decoration:none;font:700 14px "DM Sans",sans-serif;white-space:nowrap}.flashcard-home-button:hover{background:#ece8ff}@media(max-width:760px){.hero-actions{flex-wrap:wrap;gap:12px}.flashcard-home-button{order:3}}</style>
+    <style>
+      .flashcard-home-button{border:2px solid #7769d5;border-radius:13px;padding:13px 16px;color:#4d409f;background:#fffaf1;text-decoration:none;font:700 14px "DM Sans",sans-serif;white-space:nowrap}
+      .flashcard-home-button:hover{background:#ece8ff}
+      @media(max-width:760px){.hero-actions{flex-wrap:wrap;gap:12px}.flashcard-home-button{order:3}}
+    </style>
     <link rel="stylesheet" href="trivia.css" />
     <link rel="stylesheet" href="multiplayer.css" />
     <link rel="stylesheet" href="people.css" />
     <link rel="stylesheet" href="bot.css" />
     <link rel="stylesheet" href="bot-mobile.css" />
     <link rel="stylesheet" href="avatar.css?v=2" />
+    <link rel="stylesheet" href="chat.css" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="js/config.js?v=2"></script>
   </head>
   <body>
     <div class="noise"></div>
@@ -24,7 +30,8 @@
       <a class="brand" href="#" aria-label="Gizmo home"><span class="brand-mark">G</span>GIZMO</a>
       <div class="top-actions" id="guestActions">
         <button class="text-button" data-open-auth="login">Log in</button>
-        <a class="text-button create-link" href="study.html">Create a set</a><button class="button small" data-open-auth="signup">Sign up</button>
+        <a class="text-button create-link" href="study.html">Create a set</a>
+        <button class="button small" data-open-auth="signup">Sign up</button>
       </div>
       <button class="profile hidden" id="profileButton" type="button" aria-label="Open player dashboard"></button>
     </header>
@@ -40,41 +47,149 @@
             <a class="button play-now home-cta" href="game.html">Create room <span>→</span></a>
             <button class="how-button" id="openJoinRoom"><i>▶</i> Join room</button>
           </div>
-          <div class="social-proof"><div class="faces"><b>J</b><b>M</b><b>A</b><b>+</b></div><p>Join <strong>28,000+</strong> curious players</p></div>
+          <div class="social-proof">
+            <div class="faces"><b>J</b><b>M</b><b>A</b><b>+</b></div>
+            <p>Join <strong>28,000+</strong> curious players</p>
+          </div>
         </div>
         <div class="hero-art" aria-hidden="true">
-          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
-          <div class="spark s1">✦</div><div class="spark s2">✦</div><div class="spark s3">+</div>
-          <div class="gizmo-bot"><div class="bot-shadow"></div><div class="antenna"></div><div class="bot-head"><span class="head-gloss"></span><span class="eye"></span><span class="eye"></span><span class="smile"></span></div><div class="bot-body"><span class="bot-core"></span><span>G</span></div><div class="arm left"><i></i></div><div class="arm right"><i></i></div></div>
-          <div class="float-card card-score"><small>TODAY'S SCORE</small><strong>1,240</strong><span>↑ 18% from yesterday</span></div>
-          <div class="float-card card-streak"><span class="fire">🔥</span><div><small>YOUR STREAK</small><strong>7 days</strong></div></div>
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="spark s1">✦</div>
+          <div class="spark s2">✦</div>
+          <div class="spark s3">+</div>
+          <div class="gizmo-bot">
+            <div class="bot-shadow"></div>
+            <div class="antenna"></div>
+            <div class="bot-head">
+              <span class="head-gloss"></span>
+              <span class="eye"></span>
+              <span class="eye"></span>
+              <span class="smile"></span>
+            </div>
+            <div class="bot-body"><span class="bot-core"></span><span>G</span></div>
+            <div class="arm left"><i></i></div>
+            <div class="arm right"><i></i></div>
+          </div>
+          <div class="float-card card-score">
+            <small>TODAY'S SCORE</small>
+            <strong>1,240</strong>
+            <span>↑ 18% from yesterday</span>
+          </div>
+          <div class="float-card card-streak">
+            <span class="fire">🔥</span>
+            <div>
+              <small>YOUR STREAK</small>
+              <strong>7 days</strong>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="people-home" id="peopleHome"><div class="people-home-head"><div><p class="eyebrow"><span></span> GIZMO COMMUNITY</p><h2>Meet the <em>players.</em></h2></div><a href="#" id="viewProfileLink">View profile →</a></div><div class="people-home-grid" id="peopleHomeGrid"></div></section>
+      <section class="people-home" id="peopleHome">
+        <div class="people-home-head">
+          <div>
+            <p class="eyebrow"><span></span> GIZMO COMMUNITY</p>
+            <h2>Meet the <em>players.</em></h2>
+          </div>
+          <a href="#" id="viewProfileLink">View profile →</a>
+        </div>
+        <div class="people-home-grid" id="peopleHomeGrid"></div>
+      </section>
+
       <section class="games" id="games">
-        <div class="section-heading"><div><p class="eyebrow"><span></span> PICK A CHALLENGE</p><h2>Ready, set, <em>Gizmo!</em></h2></div><p>New games land every day.<br />Your best score is waiting.</p></div>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow"><span></span> PICK A CHALLENGE</p>
+            <h2>Ready, set, <em>Gizmo!</em></h2>
+          </div>
+          <p>New games land every day.<br />Your best score is waiting.</p>
+        </div>
         <div class="game-grid">
-          <article class="game-card memory"><div class="card-icon">🌍</div><div><p>WORLD</p><h3>Globe Quiz</h3><span>Places, people, and history</span></div><button data-game="world">Play <b>→</b></button></article>
-          <article class="game-card words"><div class="card-icon">🧠</div><div><p>SCIENCE</p><h3>Brain Boost</h3><span>Discover how things work</span></div><button data-game="science">Play <b>→</b></button></article>
-          <article class="game-card logic"><div class="card-icon">🎬</div><div><p>FUN</p><h3>Pop Quiz</h3><span>Movies, music, and more</span></div><button data-game="fun">Play <b>→</b></button></article>
+          <article class="game-card memory">
+            <div class="card-icon">🌍</div>
+            <div>
+              <p>WORLD</p>
+              <h3>Globe Quiz</h3>
+              <span>Places, people, and history</span>
+            </div>
+            <button data-game="world">Play <b>→</b></button>
+          </article>
+          <article class="game-card words">
+            <div class="card-icon">🧠</div>
+            <div>
+              <p>SCIENCE</p>
+              <h3>Brain Boost</h3>
+              <span>Discover how things work</span>
+            </div>
+            <button data-game="science">Play <b>→</b></button>
+          </article>
+          <article class="game-card logic">
+            <div class="card-icon">🎬</div>
+            <div>
+              <p>FUN</p>
+              <h3>Pop Quiz</h3>
+              <span>Movies, music, and more</span>
+            </div>
+            <button data-game="fun">Play <b>→</b></button>
+          </article>
         </div>
       </section>
     </main>
 
     <div class="modal hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-      <div class="modal-panel auth-panel"><button class="close" data-close="authModal" aria-label="Close">×</button><div class="mini-brand"><span class="brand-mark">G</span></div><p class="eyebrow center"><span></span> WELCOME TO GIZMO</p><h2 id="authTitle">Play with your brain on.</h2><p class="auth-subtitle" id="authSubtitle">Log in to save your scores and keep your streak.</p>
-        <button class="google-button" id="googleSignIn"><span class="google-g">G</span> Continue with Google</button><div class="divider"><span>or continue with email</span></div>
-        <form id="authForm"><label>Email<input id="email" type="email" placeholder="you@example.com" required /></label><label>Password<input id="password" type="password" minlength="6" placeholder="At least 6 characters" required /></label><button class="button full" type="submit" id="authSubmit">Log in <span>→</span></button></form>
+      <div class="modal-panel auth-panel">
+        <button class="close" data-close="authModal" aria-label="Close">×</button>
+        <div class="mini-brand"><span class="brand-mark">G</span></div>
+        <p class="eyebrow center"><span></span> WELCOME TO GIZMO</p>
+        <h2 id="authTitle">Play with your brain on.</h2>
+        <p class="auth-subtitle" id="authSubtitle">Log in to save your scores and keep your streak.</p>
+        <button class="google-button" id="googleSignIn"><span class="google-g">G</span> Continue with Google</button>
+        <div class="divider"><span>or continue with email</span></div>
+        <form id="authForm">
+          <label>Email<input id="email" type="email" placeholder="you@example.com" required /></label>
+          <label>Password<input id="password" type="password" minlength="6" placeholder="At least 6 characters" required /></label>
+          <button class="button full" type="submit" id="authSubmit">Log in <span>→</span></button>
+        </form>
         <p class="switch-copy" id="switchCopy">New to Gizmo? <button data-switch-auth="signup">Create an account</button></p>
         <p class="form-note" id="formNote"></p>
       </div>
+
     </div>
+    <div class="modal hidden" id="gameModal" role="dialog" aria-modal="true" aria-labelledby="gameTitle">
+      <div class="modal-panel game-panel">
+        <button class="close" data-close="gameModal" aria-label="Close">×</button>
+        <div class="game-top">
+          <span id="gameKind">TRIVIA</span>
+          <strong>Score: <b id="score">0</b></strong>
+        </div>
+        <div class="progress-track"><span id="progressBar"></span></div>
+        <p class="question-count" id="questionCount">QUESTION 1 OF 5</p>
+        <h2 id="gameTitle">Question goes here</h2>
+        <p id="gameInstruction">Choose the best answer.</p>
+        <div class="board trivia-board" id="gameBoard"></div>
+        <p class="answer-note" id="answerNote"></p>
+        <button class="button full hidden" id="nextQuestion">Next question <span>→</span></button>
+        <button class="button full hidden" id="restartGame">Play again <span>↻</span></button>
+      </div>
 
-    <div class="modal hidden" id="gameModal" role="dialog" aria-modal="true" aria-labelledby="gameTitle"><div class="modal-panel game-panel"><button class="close" data-close="gameModal" aria-label="Close">×</button><div class="game-top"><span id="gameKind">TRIVIA</span><strong>Score: <b id="score">0</b></strong></div><div class="progress-track"><span id="progressBar"></span></div><p class="question-count" id="questionCount">QUESTION 1 OF 5</p><h2 id="gameTitle">Question goes here</h2><p id="gameInstruction">Choose the best answer.</p><div class="board trivia-board" id="gameBoard"></div><p class="answer-note" id="answerNote"></p><button class="button full hidden" id="nextQuestion">Next question <span>→</span></button><button class="button full hidden" id="restartGame">Play again <span>↻</span></button></div></div>
+    </div>
+    <div class="modal hidden" id="joinRoomModal" role="dialog" aria-modal="true" aria-labelledby="joinRoomTitle">
+      <div class="modal-panel join-panel">
+        <button class="close" id="closeJoinRoom" aria-label="Close">×</button>
+        <p class="eyebrow center"><span></span> MULTIPLAYER TRIVIA</p>
+        <div class="join-icon">🏆</div>
+        <h2 id="joinRoomTitle">Join a room</h2>
+        <p>Enter the 6-character room ID shared by your friend.</p>
+        <form id="joinRoomForm">
+          <input id="homeRoomCode" maxlength="6" placeholder="ROOM ID" autocomplete="off" required />
+          <button class="button full" type="submit">Join game <span>→</span></button>
+        </form>
+      </div>
 
-    <div class="modal hidden" id="joinRoomModal" role="dialog" aria-modal="true" aria-labelledby="joinRoomTitle"><div class="modal-panel join-panel"><button class="close" id="closeJoinRoom" aria-label="Close">×</button><p class="eyebrow center"><span></span> MULTIPLAYER TRIVIA</p><div class="join-icon">🏆</div><h2 id="joinRoomTitle">Join a room</h2><p>Enter the 6-character room ID shared by your friend.</p><form id="joinRoomForm"><input id="homeRoomCode" maxlength="6" placeholder="ROOM ID" autocomplete="off" required /><button class="button full" type="submit">Join game <span>→</span></button></form></div></div>
+    </div>
     <div class="toast hidden" id="toast"></div>
-    <script src="app.js"></script>
+    <script src="app.js?v=3"></script>
+    <script src="chat.js"></script>
   </body>
 </html>

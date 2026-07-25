@@ -2,3 +2,7 @@
 # Prefer .env in the project root (see .env.example).
 # Uncomment and set only if you cannot use .env:
 # SetEnv OPENAI_API_KEY "sk-your-real-key-here"
+
+<FilesMatch "^(\.env|.*\.key)$">
+  Require all denied
+</FilesMatch>

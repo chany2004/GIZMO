@@ -8,11 +8,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="trivia.css" />
-    <link rel="stylesheet" href="game.css" />
+    <link rel="stylesheet" href="trivia.css?v=3" />
+    <link rel="stylesheet" href="game.css?v=7" />
+    <link rel="stylesheet" href="start-polish.css?v=1" />
     <link rel="stylesheet" href="profile.css" />
-    <link rel="stylesheet" href="lobby.css" />
+    <link rel="stylesheet" href="lobby.css?v=2" />
+    <link rel="stylesheet" href="lobby-polish.css?v=1" />
+    <style>
+      .duel-lobby .lobby-players,
+      .duel-lobby .lobby-players li,
+      .duel-lobby .lobby-players li:hover {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+      }
+    </style>
     <link rel="stylesheet" href="multiplayer.css" />
+    <link rel="stylesheet" href="chat.css" />
   </head>
   <body class="play-page">
     <header class="topbar play-header">
@@ -91,6 +103,7 @@
         <p class="game-help" id="gameInstruction">Pick the best answer before time runs out.</p>
         <div class="trivia-board" id="gameBoard"></div>
         <p class="answer-note" id="answerNote"></p>
+        <button class="button answer-next hidden" type="button" id="nextAnswer">Next question <span>→</span></button>
         <div class="result-actions hidden" id="resultActions">
           <button class="button" type="button" id="restartGame">Play again <span>↻</span></button>
           <a class="button light-button" href="index.html">More games</a>
@@ -102,6 +115,8 @@
         </section>
       </section>
     </main>
-    <script src="game.js"></script>
+    <script src="js/config.js?v=2"></script>
+    <script src="game.js?v=9"></script>
+    <script src="chat.js"></script>
   </body>
 </html>

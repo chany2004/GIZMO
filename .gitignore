@@ -1,2 +1,4 @@
 .env
 data/openai.key
+data/ai.key
+data/gizmo_rooms.json

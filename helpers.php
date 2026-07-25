@@ -1,11 +1,33 @@
 <?php
-require_once __DIR__ . '/config.php';
+/**
+ * GIZMO Helpers — Works on XAMPP AND Vercel
+ * - XAMPP: requires config.php from same directory
+ * - Vercel: requires api/config.php (because helpers.php is at root, config is at root too)
+ */
+$configPath = __DIR__ . '/config.php';
+if (!file_exists($configPath)) {
+    // Fallback for Vercel
+    $configPath = __DIR__ . '/api/config.php';
+}
+require_once $configPath;
+
+// AI key detection for chat.php
+$aiKeyPath = __DIR__ . '/data/ai.key';
+if (file_exists($aiKeyPath)) {
+    define('GIZMO_AI_KEY_FILE', $aiKeyPath);
+}
 
 function json_reply(array $data, int $status = 200): void
 {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($data);
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        exit;
+    }
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -29,12 +51,8 @@ function clean_name(string $name): string
 
 function photo_public_url(?string $photo, $version = null): string
 {
-    if (!$photo) {
-        return '';
-    }
-    if (str_starts_with($photo, 'data:') || str_starts_with($photo, 'http://') || str_starts_with($photo, 'https://')) {
-        return $photo;
-    }
+    if (!$photo) return '';
+    if (str_starts_with($photo, 'data:') || str_starts_with($photo, 'http://') || str_starts_with($photo, 'https://')) return $photo;
     $v = $version ? (is_numeric($version) ? (int) $version : strtotime((string) $version)) : time();
     return $photo . '?v=' . $v;
 }
@@ -79,22 +97,14 @@ function update_streak(PDO $db, string $userId): void
     $stmt = $db->prepare('SELECT streak, last_played FROM users WHERE id = ?');
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
-    if (!$row) {
-        return;
-    }
+    if (!$row) return;
 
     $today = date('Y-m-d');
     $last = $row['last_played'];
     $streak = (int) $row['streak'];
 
-    if ($last === $today) {
-        return;
-    }
-    if ($last === date('Y-m-d', strtotime('-1 day'))) {
-        $streak++;
-    } else {
-        $streak = 1;
-    }
+    if ($last === $today) return;
+    $streak = ($last === date('Y-m-d', strtotime('-1 day'))) ? $streak + 1 : 1;
 
     $db->prepare('UPDATE users SET streak = ?, last_played = ? WHERE id = ?')
         ->execute([$streak, $today, $userId]);
@@ -128,3 +138,42 @@ function answer_keys(PDO $db, int $categoryId): array
     }
     return $keys;
 }
+
+function gizmo_load_ai_key(): string
+{
+    $candidates = [];
+
+    // .env file
+    $envPath = __DIR__ . '/.env';
+    if (file_exists($envPath)) {
+        $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || $line[0] === '#') continue;
+            if (strpos($line, '=') === false) continue;
+            list($k, $v) = explode('=', $line, 2);
+            $k = trim($k);
+            $v = trim($v, " \t\n\r\0\x0B\"'");
+            if (in_array($k, ['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'], true)) {
+                $candidates[] = $v;
+            }
+        }
+    }
+
+    // Key files
+    foreach ([__DIR__ . '/data/ai.key'] as $kf) {
+        if (is_readable($kf)) $candidates[] = trim((string) file_get_contents($kf));
+    }
+
+    // Environment variables
+    foreach (['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'] as $envK) {
+        $val = trim((string) (getenv($envK) ?: ($_ENV[$envK] ?? '')));
+        if ($val !== '') $candidates[] = $val;
+    }
+
+    foreach ($candidates as $candidate) {
+        if ($candidate !== '' && !preg_match('/REPLACE|YOUR|changeme|^sk-your/i', $candidate)) return $candidate;
+    }
+    return '';
+}
+

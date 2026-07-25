@@ -241,6 +241,8 @@ if ($action === 'answer') {
     $db->commit();
 
     $response['correct'] = $correct;
+    // Reveal the correct option only after this player has submitted an answer.
+    $response['correctAnswer'] = $keys[$round] ?? null;
 }
 
 $roomRow = load_room($db, $code);

@@ -1,19 +1,197 @@
 <!doctype html>
-<html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Make a study set — Gizmo</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="study.css"></head>
-<body class="study-page"><header class="topbar"><a class="brand" href="index.html"><span class="brand-mark">G</span>GIZMO</a><a class="back-link" href="index.html">&larr; Home</a></header>
-<main class="study-wrap">
-<section class="builder" id="builder"><p class="eyebrow"><span></span> CREATE A STUDY SET</p><h1>Make your notes <em>stick.</em></h1><p class="builder-intro">Import your notes, let AI make a first draft, then edit every card before studying.</p>
-<label>Set title<input id="setTitle" maxlength="50" placeholder="e.g. Biology: Cell Structure"></label>
-<div class="source-grid"><button class="source-option active" type="button" data-source="manual">Write cards</button><button class="source-option" type="button" data-source="ai">Generate with AI <span>✦</span></button></div>
-<div id="manualSource"><div class="editor-heading"><span>Flashcards</span><button class="add-card" id="addCard" type="button">+ Add flashcard</button></div><div id="cardsEditor" class="cards-editor"></div><p class="input-hint" id="cardCount">0 cards ready</p></div>
-<div id="aiSource" class="hidden"><label>Study material<textarea id="sourceText" rows="8" maxlength="30000" placeholder="Paste your class notes, article, or reading material here..."></textarea></label><label class="drop-zone" id="dropZone" for="fileInput"><input id="fileInput" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" hidden><span class="upload-icon">&uarr;</span><strong>Import a notes file</strong><small>TXT, Markdown, or CSV — up to 2 MB</small><span id="fileName"></span></label><div class="ai-controls"><label>Cards to create<select id="aiCardCount"><option value="5">5 cards</option><option value="10" selected>10 cards</option><option value="15">15 cards</option><option value="20">20 cards</option></select></label><button class="button ai-button" id="generateCards" type="button">Generate cards <span>✦</span></button></div><p class="input-hint">AI drafts cards from your material. Review them before creating the set.</p></div>
-<button class="button" id="createSet">Create flashcards <span>&rarr;</span></button><p class="error" id="error" aria-live="polite"></p></section>
-<section class="learn hidden" id="learn"><div class="learn-top"><button class="text-button" id="exitSet">&larr; Exit set</button><span id="setProgress">1 / 1</span><button class="text-button" id="modeButton">Quiz mode &rarr;</button></div><div class="card-progress"><span id="cardProgress"></span></div><p class="eyebrow center" id="setName">STUDY SET</p><button class="flashcard" id="flashcard"><span class="card-side" id="cardSide">QUESTION</span><strong id="cardText"></strong><small>Tap, click, or press Space to flip</small></button><div class="card-controls"><button class="round-control" id="previousCard" aria-label="Previous card">&larr;</button><button class="known-button" id="knownCard">I knew this ✓</button><button class="round-control" id="nextCard" aria-label="Next card">&rarr;</button></div><p class="keyboard-help">Keyboard: &larr; &rarr; to move · Space to flip · K for “I knew this”</p></section>
-<section class="learn hidden" id="quiz"><div class="learn-top"><button class="text-button" id="backToCards">&larr; Flashcards</button><span id="quizProgress">Question 1</span></div><div class="card-progress"><span id="quizBar"></span></div><p class="eyebrow center">KNOWLEDGE CHECK</p><h1 class="quiz-question" id="quizQuestion"></h1><div class="quiz-options" id="quizOptions"></div><p class="quiz-feedback" id="quizFeedback"></p><button class="button hidden" id="nextQuiz">Next <span>&rarr;</span></button></section>
-<section class="learn hidden" id="complete"><div class="complete-icon">✦</div><p class="eyebrow center">SESSION COMPLETE</p><h1 id="completeTitle">Great work!</h1><p class="builder-intro" id="completeText"></p><div class="result-actions"><button class="button" id="studyAgain">Study again <span>↻</span></button><button class="button light-button" id="makeAnother">New set</button></div></section>
-</main><script src="study.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Make a study set — GIZMO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="study.css?v=3">
+  <link rel="stylesheet" href="chat.css">
+</head>
+<body class="study-page">
+
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">G</span>GIZMO</a>
+    <div class="topbar-right">
+      <span class="ai-status-pill" id="aiStatusPill" title="AI Status">
+        <span class="pulse-dot"></span> <span id="aiStatusText">AI Ready</span>
+      </span>
+      <a class="back-link" href="index.html">&larr; Home</a>
+    </div>
+  </header>
+
+  <main class="study-wrap">
+
+    <!-- BUILDER SECTION -->
+    <section class="builder" id="builder">
+      <div class="builder-header">
+        <p class="eyebrow"><span></span> CREATE A STUDY SET</p>
+        <h1>Make your notes <em>stick.</em></h1>
+        <p class="builder-intro">Write your own cards or let AI automatically extract flashcards from your notes.</p>
+      </div>
+
+      <!-- TITLE INPUT -->
+      <div class="field-group">
+        <label for="setTitle" class="field-label">Set Title</label>
+        <div class="input-with-icon">
+          <span class="input-icon">✏️</span>
+          <input id="setTitle" maxlength="60" placeholder="e.g. Biology: Cell Structure & Organelles">
+        </div>
+      </div>
+
+      <!-- MODE TAB SWITCHER -->
+      <div class="source-tabs">
+        <button class="tab-btn active" type="button" data-source="manual">
+          <span class="tab-icon">✍️</span> Write Cards
+        </button>
+        <button class="tab-btn" type="button" data-source="ai">
+          <span class="tab-icon">✦</span> Generate with AI
+        </button>
+      </div>
+
+      <!-- MANUAL EDITOR -->
+      <div id="manualSource" class="source-content">
+        <div class="editor-toolbar">
+          <div class="toolbar-left">
+            <span class="toolbar-title">Flashcards</span>
+            <span class="badge" id="cardCountBadge">0 cards</span>
+          </div>
+          <div class="toolbar-actions">
+            <button class="btn-subtle" id="swapCardsBtn" type="button" title="Swap Question and Answer for all cards">⇄ Swap Q&amp;A</button>
+            <button class="btn-subtle" id="clearEmptyBtn" type="button" title="Clear empty rows">🗑️ Clean</button>
+            <button class="btn-accent" id="addCard" type="button">+ Add card</button>
+          </div>
+        </div>
+
+        <div id="cardsEditor" class="cards-editor"></div>
+
+        <div class="editor-bottom-bar">
+          <button class="btn-add-large" id="addCardBottom" type="button">+ Add another flashcard</button>
+        </div>
+      </div>
+
+      <!-- AI GENERATOR SOURCE -->
+      <div id="aiSource" class="source-content hidden">
+        <div class="ai-box">
+          <label for="sourceText" class="field-label">Study Material / Notes</label>
+          <textarea id="sourceText" rows="7" maxlength="30000" placeholder="Paste your study notes, lecture transcript, article, or summary here..."></textarea>
+
+          <label class="drop-zone" id="dropZone" for="fileInput">
+            <input id="fileInput" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" hidden>
+            <div class="upload-icon-wrap">📄</div>
+            <strong>Import a notes file</strong>
+            <small>TXT, Markdown, or CSV — up to 2 MB</small>
+            <span id="fileName" class="file-badge"></span>
+          </label>
+
+          <div class="ai-options-grid">
+            <div class="option-field">
+              <label for="aiCardCount" class="field-label">Cards to generate</label>
+              <select id="aiCardCount">
+                <option value="5">5 Cards</option>
+                <option value="10" selected>10 Cards</option>
+                <option value="15">15 Cards</option>
+                <option value="20">20 Cards</option>
+              </select>
+            </div>
+            <div class="option-field action-field">
+              <button class="button ai-button" id="generateCards" type="button">
+                <span>Generate Cards ✦</span>
+              </button>
+            </div>
+          </div>
+          <p class="ai-hint">AI will extract key concepts and draft flashcards into the editor for your review.</p>
+        </div>
+      </div>
+
+      <!-- GLOBAL ACTION & ERROR -->
+      <div class="builder-footer">
+        <button class="button primary-action" id="createSet">
+          Create Study Set <span>&rarr;</span>
+        </button>
+        <p class="error" id="error" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- FLASHCARD LEARN SECTION -->
+    <section class="learn hidden" id="learn">
+      <div class="learn-top">
+        <button class="text-button" id="exitSet">&larr; Exit</button>
+        <span id="setProgress" class="progress-pill">1 / 1</span>
+        <button class="text-button quiz-mode-link" id="modeButton">Quiz mode &rarr;</button>
+      </div>
+
+      <div class="card-progress-track">
+        <span id="cardProgress" class="card-progress-bar"></span>
+      </div>
+
+      <p class="eyebrow center" id="setName">STUDY SET</p>
+
+      <div class="flashcard-scene">
+        <button class="flashcard-3d" id="flashcard" type="button" aria-label="Flashcard - click to flip">
+          <div class="flashcard-inner">
+            <div class="flashcard-front">
+              <span class="card-side-tag">QUESTION</span>
+              <strong id="cardTextFront"></strong>
+              <small class="flip-hint">Tap or press Space to flip ↺</small>
+            </div>
+            <div class="flashcard-back">
+              <span class="card-side-tag">ANSWER</span>
+              <strong id="cardTextBack"></strong>
+              <small class="flip-hint">Tap or press Space to flip ↺</small>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <div class="card-controls">
+        <button class="round-control" id="previousCard" aria-label="Previous card">&larr;</button>
+        <button class="known-button" id="knownCard">I knew this ✓</button>
+        <button class="round-control" id="nextCard" aria-label="Next card">&rarr;</button>
+      </div>
+
+      <p class="keyboard-help">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> Navigate &nbsp;•&nbsp; <kbd>Space</kbd> Flip card &nbsp;•&nbsp; <kbd>K</kbd> Mark as known
+      </p>
+    </section>
+
+    <!-- QUIZ MODE SECTION -->
+    <section class="learn hidden" id="quiz">
+      <div class="learn-top">
+        <button class="text-button" id="backToCards">&larr; Flashcards</button>
+        <span id="quizProgress" class="progress-pill">Question 1</span>
+      </div>
+
+      <div class="card-progress-track">
+        <span id="quizBar" class="card-progress-bar"></span>
+      </div>
+
+      <p class="eyebrow center">KNOWLEDGE CHECK</p>
+      <h2 class="quiz-question" id="quizQuestion"></h2>
+      <div class="quiz-options" id="quizOptions"></div>
+      <p class="quiz-feedback" id="quizFeedback"></p>
+      <button class="button hidden" id="nextQuiz">Next Question <span>&rarr;</span></button>
+    </section>
+
+    <!-- COMPLETE SECTION -->
+    <section class="learn hidden" id="complete">
+      <div class="complete-icon">🎉</div>
+      <p class="eyebrow center">SESSION COMPLETE</p>
+      <h1 id="completeTitle">Great work!</h1>
+      <p class="builder-intro" id="completeText"></p>
+      <div class="result-actions">
+        <button class="button" id="studyAgain">Study again <span>↻</span></button>
+        <button class="button light-button" id="makeAnother">New Set</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="study.js?v=3"></script>
+  <script src="chat.js"></script>
+</body>
+</html>

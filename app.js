@@ -1,7 +1,51 @@
 const quizzes={world:{label:'WORLD TRIVIA',questions:[['What is the largest ocean on Earth?',['Atlantic Ocean','Pacific Ocean','Indian Ocean','Arctic Ocean'],1],['Which country is home to the pyramids of Giza?',['Mexico','Greece','Egypt','Italy'],2],['What is the capital city of Japan?',['Kyoto','Tokyo','Osaka','Seoul'],1],['The Sahara Desert is on which continent?',['Asia','Africa','Australia','South America'],1],['Which planet is known as the Red Planet?',['Venus','Jupiter','Mars','Mercury'],2]]},science:{label:'SCIENCE TRIVIA',questions:[['What gas do plants absorb from the air?',['Oxygen','Carbon dioxide','Nitrogen','Helium'],1],['How many bones are in an adult human body?',['106','206','306','406'],1],['What force pulls objects toward Earth?',['Magnetism','Friction','Gravity','Electricity'],2],['Which organ pumps blood around the body?',['Lungs','Brain','Heart','Liver'],2],['Water freezes at what temperature in Celsius?',['0°','10°','32°','100°'],0]]},fun:{label:'FUN TRIVIA',questions:[['How many colors are traditionally in a rainbow?',['5','6','7','8'],2],['Which instrument usually has 88 keys?',['Guitar','Piano','Violin','Drums'],1],['What is the name of the cowboy in Toy Story?',['Buzz','Woody','Rex','Andy'],1],['Which sport uses a shuttlecock?',['Tennis','Baseball','Badminton','Golf'],2],['What is the fastest land animal?',['Lion','Cheetah','Horse','Falcon'],1]]}};
 const state={mode:'login',user:JSON.parse(localStorage.getItem('gizmoUser')||'null'),score:0,quiz:null,index:0,answered:false};const $=s=>document.querySelector(s);const authModal=$('#authModal');
-async function authApi(action,body={}){const r=await fetch('auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})});const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Request failed');return d}
-async function profileApi(action,body={}){const r=await fetch('profiles.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})});const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Request failed');return d}
+
+// Vercel-compatible API functions with graceful error handling for empty JSON responses
+async function safeFetch(url, data) {
+  try {
+    const r = await fetch(url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const text = await r.text();
+    if (!text || !text.trim()) throw new Error('Empty response — backend unavailable');
+    const d = JSON.parse(text);
+    if (!r.ok || d.error) throw new Error(d.error || 'Request failed');
+    return d;
+  } catch(e) {
+    if (e.message.includes('Empty response')) throw e;
+    throw new Error(e.message || 'Connection error');
+  }
+}
+const authApi = (action, body = {}) => {
+  const request=window.GIZMO?.authApi?window.GIZMO.authApi(action,body):safeFetch('auth.php',{action,...body});
+  return request.catch(async error=>{
+    if(window.GIZMO?.isVercel&&['register','login','me'].includes(action))return offlineAuth(action,body);
+    throw error;
+  });
+};
+async function offlineHash(value){
+  const data=new TextEncoder().encode(value);
+  if(window.crypto?.subtle){const digest=await crypto.subtle.digest('SHA-256',data);return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+  return btoa(unescape(encodeURIComponent(value)));
+}
+function offlineAccounts(){try{return JSON.parse(localStorage.getItem('gizmoOfflineAccounts')||'[]')}catch{return []}}
+async function offlineAuth(action,body){
+  const accounts=offlineAccounts();
+  if(action==='me'){const account=accounts.find(a=>a.id===body.id);if(!account)throw new Error('Local account not found.');return {user:{id:account.id,name:account.name,email:account.email,offline:true}}}
+  const email=(body.email||'').trim().toLowerCase(),password=body.password||'';
+  if(!email||password.length<6)throw new Error('Enter a valid email and password of at least 6 characters.');
+  const passwordHash=await offlineHash(password);
+  let account=accounts.find(a=>a.email===email);
+  if(action==='register'){
+    if(account)throw new Error('An account with this email already exists on this device.');
+    account={id:'local-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),name:(body.name||email.split('@')[0]).slice(0,24),email,passwordHash};
+    accounts.push(account);localStorage.setItem('gizmoOfflineAccounts',JSON.stringify(accounts));
+  }else if(!account||account.passwordHash!==passwordHash)throw new Error('Incorrect local email or password.');
+  return {user:{id:account.id,name:account.name,email:account.email,offline:true}};
+}
+const profileApi = (action, body = {}) => {
+  if (window.GIZMO?.profileApi) return window.GIZMO.profileApi(action, body);
+  return safeFetch('profiles.php', {action,...body});
+};
 function toast(message){const t=$('#toast');t.textContent=message;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),3200)}function closeModal(id){$(`#${id}`).classList.add('hidden')}
 function openAuth(mode='login'){state.mode=mode;$('#authTitle').textContent=mode==='login'?'Play with your brain on.':'Your next streak starts now.';$('#authSubtitle').textContent=mode==='login'?'Log in to save your scores and keep your streak.':'Create a free account and make every game count.';$('#authSubmit').innerHTML=`${mode==='login'?'Log in':'Create account'} <span>→</span>`;$('#switchCopy').innerHTML=mode==='login'?'New to Gizmo? <button type="button" data-switch-auth="signup">Create an account</button>':'Already playing? <button type="button" data-switch-auth="login">Log in</button>';$('#formNote').textContent='';authModal.classList.remove('hidden')}
 function saveUser(user){state.user=user;localStorage.setItem('gizmoUser',JSON.stringify(user));renderUser()}
