@@ -66,7 +66,9 @@ function gizmo_load_ai_key_from_sources(): string
     $candidates = [];
 
     // .env file
-    foreach (['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'] as $envKey) {
+    // Prefer an explicitly configured Groq key. This avoids an old Gemini
+    // value in AI_API_KEY accidentally taking priority on hosted deployments.
+    foreach (['GROQ_API_KEY', 'AI_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY'] as $envKey) {
         $value = gizmo_env($envKey);
         if ($value !== '') $candidates[] = $value;
     }
@@ -77,7 +79,7 @@ function gizmo_load_ai_key_from_sources(): string
     }
 
     // Environment variables
-    foreach (['AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENAI_API_KEY'] as $envK) {
+    foreach (['GROQ_API_KEY', 'AI_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY'] as $envK) {
         $val = trim((string) (getenv($envK) ?: ($_ENV[$envK] ?? '')));
         if ($val !== '') $candidates[] = $val;
     }
