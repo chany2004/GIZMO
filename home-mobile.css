@@ -1,0 +1,204 @@
+/* Compact, touch-friendly home screen controls. Loaded last to keep desktop
+   styling unchanged while making the phone layout intentional and stable. */
+@media (max-width: 600px) {
+  .topbar {
+    height: auto;
+    min-height: 64px;
+    padding: 9px 14px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .brand {
+    flex: 0 0 auto;
+    gap: 6px;
+    font-size: 21px;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+  }
+
+  .brand-mark {
+    width: 27px;
+    height: 27px;
+    border-radius: 8px;
+    font-size: 18px;
+  }
+
+  .top-actions {
+    min-width: 0;
+    margin-left: auto;
+    display: grid;
+    grid-template-columns: auto auto auto;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .top-actions .text-button {
+    padding: 9px 4px;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .top-actions .button.small {
+    flex-shrink: 0;
+    padding: 9px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 3px 0 #0a102b;
+  }
+
+  .profile {
+    width: 42px;
+    height: 42px;
+    font-size: 17px;
+  }
+
+  .hero {
+    padding: 32px 18px 36px;
+    grid-template-columns: minmax(0, 1fr) 34%;
+    column-gap: 5px;
+  }
+
+  .hero h1 {
+    font-size: clamp(31px, 9vw, 40px);
+  }
+
+  .hero-text {
+    margin: 16px 0 20px;
+    font-size: 15px;
+  }
+
+  .hero-art {
+    height: 150px;
+  }
+
+  .gizmo-bot {
+    top: 32px;
+    margin-left: -51px;
+    transform: scale(0.43);
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 0;
+  }
+
+  .hero-actions > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .play-now {
+    order: 1;
+    padding: 12px 10px;
+    font-size: 13px;
+    box-shadow: 0 4px 0 #d84e6c;
+  }
+
+  .play-now span {
+    margin-left: 6px;
+    font-size: 16px;
+  }
+
+  .how-button {
+    order: 2;
+    padding: 11px 8px;
+    border: 1px solid #cfd5e6;
+    border-radius: 12px;
+    background: #fffaf1;
+    font-size: 13px;
+  }
+
+  .flashcard-home-button {
+    order: 3;
+    grid-column: 1 / -1;
+    padding: 11px 14px;
+    font-size: 13px;
+  }
+
+  .social-proof {
+    margin-top: 28px;
+  }
+
+  .gizmo-ai-launcher {
+    right: 14px;
+    bottom: 14px;
+    width: 50px;
+    height: 50px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .gizmo-ai-launcher > span:not(.bot-icon):not(.live-pulse) {
+    display: none;
+  }
+
+  .gizmo-ai-launcher .live-pulse {
+    position: absolute;
+    right: 7px;
+    bottom: 7px;
+    width: 7px;
+    height: 7px;
+  }
+
+  .gizmo-ai-window {
+    right: 10px;
+    bottom: 76px;
+    left: 10px;
+    width: calc(100% - 20px);
+    height: min(500px, 72vh);
+  }
+}
+
+@media (max-width: 390px) {
+  .topbar {
+    padding-inline: 11px;
+  }
+
+  .brand {
+    font-size: 19px;
+  }
+
+  .top-actions {
+    gap: 3px;
+  }
+
+  .top-actions .text-button {
+    padding-inline: 3px;
+    font-size: 11px;
+  }
+
+  .top-actions .button.small {
+    padding-inline: 8px;
+    font-size: 11px;
+  }
+
+  .create-link {
+    font-size: 0;
+  }
+
+  .create-link::after {
+    content: '+ Set';
+    font-size: 11px;
+  }
+
+  .hero-art {
+    height: 135px;
+  }
+
+  .gizmo-bot {
+    margin-left: -46px;
+    transform: scale(0.39);
+  }
+}
