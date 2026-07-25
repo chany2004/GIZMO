@@ -115,7 +115,9 @@ if ($action === 'create') {
     $userId = $data['userId'] ?? null;
 
     do {
-        $code = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+        // Six digits are fast to type on a phone and avoid letter/number
+        // confusion when a host shares a Room ID aloud.
+        $code = (string) random_int(100000, 999999);
         $check = $db->prepare('SELECT id FROM rooms WHERE room_code = ?');
         $check->execute([$code]);
     } while ($check->fetch());

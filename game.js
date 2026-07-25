@@ -16,6 +16,12 @@ const screens=['startScreen','lobbyScreen','quizScreen'];
 function showScreen(id){screens.forEach(s=>$(`#${s}`)?.classList.toggle('hidden',s!==id))}
 function isHost(){return room?.hostId===playerId}
 function playerName(){return $('#playerName').value.trim()||'Player'}
+function generateNumericRoomCode(){
+  var value;
+  if(window.crypto?.getRandomValues){var values=new Uint32Array(1);window.crypto.getRandomValues(values);value=values[0]}
+  else value=Math.floor(Math.random()*900000);
+  return String(100000+(value%900000));
+}
 function showStartError(msg){$('#inviteNote').textContent=msg}
 function showLobbyNote(msg){$('#lobbyNote').textContent=msg}
 function cleanCategoryIcon(slug,icon){return !icon||/[ÃÂïð]/.test(icon)?(categoryIcons[slug]||'🎯'):icon}
@@ -112,9 +118,6 @@ async function copyText(text,noteEl,successMsg){
 async function createRoom(){
   var btn=$('#startGame');
   if(!category){showStartError('Please choose a category.');return}
-  // A Vercel deployment can run immediately without a PHP/MySQL backend.
-  // Start a browser-local practice room instead of waiting for an API response.
-  if(window.GIZMO?.isVercel){startOfflineRoom();return}
   btn.disabled=true;
   showStartError('');
   try{
@@ -133,11 +136,12 @@ async function createRoom(){
 }
 
 function startOfflineRoom(){
-  roomCode='LOCAL';
+  roomCode=generateNumericRoomCode();
   playerId='local-player';
   questions=offlineWorldQuestions.map(q=>({...q}));
   questionCache[category]=questions;
   room={status:'lobby',offline:true,category:category,hostId:playerId,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
+  localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
   enterLobby({room:room});
 }
 
