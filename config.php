@@ -61,31 +61,40 @@ function gizmo_is_placeholder_key(string $key): bool
     return false;
 }
 
+function gizmo_is_supported_ai_key(string $key): bool
+{
+    // Provider keys used by this app have a dependable public prefix. Ignoring
+    // other values prevents an OAuth token or placeholder from being sent to
+    // the Gemini endpoint as an API key.
+    return str_starts_with($key, 'gsk_')
+        || str_starts_with($key, 'AIza')
+        || str_starts_with($key, 'sk-');
+}
+
 function gizmo_load_ai_key_from_sources(): string
 {
     $candidates = [];
 
-    // .env file
-    // Prefer an explicitly configured Groq key. This avoids an old Gemini
-    // value in AI_API_KEY accidentally taking priority on hosted deployments.
-    foreach (['GROQ_API_KEY', 'AI_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY'] as $envKey) {
+    // Explicit provider settings take precedence on hosted deployments.
+    foreach (['GROQ_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY'] as $envKey) {
         $value = gizmo_env($envKey);
         if ($value !== '') $candidates[] = $value;
     }
 
-    // Local key files
+    // Local setup_ai.php stores the chosen key here. Check it before a generic
+    // AI_API_KEY so an old invalid local value cannot override a Groq key.
     foreach ([__DIR__ . '/data/ai.key', __DIR__ . '/data/openai.key'] as $kf) {
         if (is_readable($kf)) $candidates[] = trim((string) file_get_contents($kf));
     }
 
-    // Environment variables
-    foreach (['GROQ_API_KEY', 'AI_API_KEY', 'GEMINI_API_KEY', 'OPENAI_API_KEY'] as $envK) {
+    // Generic compatibility setting, used only when no explicit key exists.
+    foreach (['AI_API_KEY'] as $envK) {
         $val = trim((string) (getenv($envK) ?: ($_ENV[$envK] ?? '')));
         if ($val !== '') $candidates[] = $val;
     }
 
     foreach ($candidates as $candidate) {
-        if (!gizmo_is_placeholder_key($candidate)) return $candidate;
+        if (!gizmo_is_placeholder_key($candidate) && gizmo_is_supported_ai_key($candidate)) return $candidate;
     }
     return '';
 }
