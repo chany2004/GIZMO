@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `updated_at`    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_email` (`email`),
-  KEY `idx_users_score` (`total_score` DESC)
+  KEY `idx_users_score` (`total_score`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

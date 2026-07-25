@@ -39,9 +39,11 @@ const gApi = (endpoint, action, extra = {}) => {
   return safeFetch(endpoint+'.php', {action,roomCode,playerId,userId:user?.id||null,...extra});
 };
 function api(action,extra={}){return gApi('multiplayer', action, extra)}
-function profileApi(action,body={}){return safeFetch('profiles.php', {action,...body})}
-function authApi(action,body={}){return safeFetch('auth.php', {action,...body})}
-function quizApi(action,body={}){return safeFetch('quiz.php', {action,...body})}
+// These must also use /api on Vercel. Calling quiz.php/auth.php directly
+// returns Vercel's empty/HTML fallback, which caused the JSON parse error.
+function profileApi(action,body={}){return gApi('profile', action, body)}
+function authApi(action,body={}){return gApi('auth', action, body)}
+function quizApi(action,body={}){return gApi('quiz', action, body)}
 
 function updateCategoryUI(){
   const info=catInfo();
