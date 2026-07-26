@@ -213,7 +213,7 @@ async function createRoom(){
     // loading state. After a short wait, open a playable local room instead.
     var d=await withTimeout(
       api('create',{name:playerName(),category:category,customQuestions:customStudyQuestions(),studyTitle:customStudy?.title||''}),
-      3000,
+      12000,
       'Online room took too long to start.'
     );
     roomCode=d.roomCode;

@@ -10,16 +10,67 @@ try {
     json_reply(['error' => gizmo_db_error_for_user($e)], 500);
 }
 
-$db->exec('DELETE FROM rooms WHERE created_at < ' . (time() - 86400));
-$db->exec(
-    'CREATE TABLE IF NOT EXISTS room_custom_quizzes (
-        room_id INT UNSIGNED NOT NULL,
-        title VARCHAR(120) NOT NULL,
-        questions_json LONGTEXT NOT NULL,
-        PRIMARY KEY (room_id),
-        CONSTRAINT fk_custom_quiz_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
-);
+function multiplayer_ensure_schema(PDO $db): void
+{
+    try {
+        // Avoid running DDL during every serverless request. A zero-row query
+        // is enough to verify that the custom-room storage already exists.
+        $db->query('SELECT room_id, title, questions_json FROM room_custom_quizzes LIMIT 0');
+        return;
+    } catch (PDOException $e) {
+        if (!preg_match('/42S02|1146|doesn.t exist|unknown table/i', $e->getMessage())) {
+            throw $e;
+        }
+    }
+
+    // Older deployments may predate custom study rooms. Keep the runtime
+    // migration deliberately portable: the application performs cleanup, so
+    // it does not require REFERENCES privileges or foreign-key support here.
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS room_custom_quizzes (
+            room_id INT UNSIGNED NOT NULL,
+            title VARCHAR(120) NOT NULL,
+            questions_json LONGTEXT NOT NULL,
+            PRIMARY KEY (room_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+}
+
+function multiplayer_existing_user_id(PDO $db, $candidate): ?string
+{
+    $userId = strtolower(trim((string) $candidate));
+    if (!preg_match('/^[a-f0-9]{40}$/', $userId)) {
+        return null;
+    }
+    $stmt = $db->prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
+    $stmt->execute([$userId]);
+    return $stmt->fetchColumn() ? $userId : null;
+}
+
+function multiplayer_clip(string $value, int $length): string
+{
+    return function_exists('mb_substr')
+        ? mb_substr($value, 0, $length, 'UTF-8')
+        : substr($value, 0, $length);
+}
+
+multiplayer_ensure_schema($db);
+
+// Expired-room cleanup is maintenance and must never stop a player from
+// creating a new room. Delete custom payloads explicitly for databases where
+// foreign-key cascades are disabled.
+try {
+    $cutoff = time() - 86400;
+    $cleanup = $db->prepare(
+        'DELETE FROM room_custom_quizzes
+         WHERE room_id IN (SELECT id FROM rooms WHERE created_at < ?)'
+    );
+    $cleanup->execute([$cutoff]);
+    $cleanup = $db->prepare('DELETE FROM rooms WHERE created_at < ?');
+    $cleanup->execute([$cutoff]);
+} catch (Throwable $e) {
+    error_log('[GIZMO multiplayer cleanup] ' . $e->getMessage());
+}
 
 function load_room(PDO $db, string $code): ?array
 {
@@ -152,7 +203,7 @@ if ($action === 'create') {
     }
     $catId = (int) $row['id'];
     $name = clean_name($data['name'] ?? '');
-    $userId = $data['userId'] ?? null;
+    $userId = multiplayer_existing_user_id($db, $data['userId'] ?? null);
 
     do {
         // Six digits are fast to type on a phone and avoid letter/number
@@ -165,44 +216,58 @@ if ($action === 'create') {
     $playerId = bin2hex(random_bytes(12));
     $now = time();
 
-    $db->beginTransaction();
-    $db->prepare(
-        'INSERT INTO rooms (room_code, category_id, host_id, status, created_at, started_at)
-         VALUES (?, ?, ?, ?, ?, ?)'
-    )->execute([$code, $catId, $playerId, 'lobby', $now, null]);
-
-    $roomId = (int) $db->lastInsertId();
-    $customQuestions = $data['customQuestions'] ?? [];
-    if (is_array($customQuestions) && $customQuestions) {
-        $cleanQuestions = [];
-        foreach (array_slice($customQuestions, 0, 60) as $question) {
-            $text = trim((string) ($question['text'] ?? ''));
-            $options = array_values(array_filter(array_map(
-                static fn($value) => trim((string) $value),
-                is_array($question['options'] ?? null) ? $question['options'] : []
-            ), static fn($value) => $value !== ''));
-            $correct = (int) ($question['correct'] ?? -1);
-            if ($text !== '' && count($options) >= 2 && count($options) <= 4 && isset($options[$correct])) {
-                $cleanQuestions[] = [
-                    'text' => mb_substr($text, 0, 500),
-                    'options' => array_map(static fn($value) => mb_substr($value, 0, 1000), $options),
-                    'correct' => $correct,
-                ];
-            }
-        }
-        if (count($cleanQuestions) < 2) {
-            $db->rollBack();
-            json_reply(['error' => 'Add at least two complete study cards.'], 400);
-        }
-        $title = mb_substr(trim((string) ($data['studyTitle'] ?? 'Study Challenge')), 0, 120);
+    try {
+        $db->beginTransaction();
         $db->prepare(
-            'INSERT INTO room_custom_quizzes (room_id, title, questions_json) VALUES (?, ?, ?)'
-        )->execute([$roomId, $title ?: 'Study Challenge', json_encode($cleanQuestions, JSON_UNESCAPED_UNICODE)]);
+            'INSERT INTO rooms (room_code, category_id, host_id, status, created_at, started_at)
+             VALUES (?, ?, ?, ?, ?, ?)'
+        )->execute([$code, $catId, $playerId, 'lobby', $now, null]);
+
+        $roomId = (int) $db->lastInsertId();
+        $customQuestions = $data['customQuestions'] ?? [];
+        if (is_array($customQuestions) && $customQuestions) {
+            $cleanQuestions = [];
+            foreach (array_slice($customQuestions, 0, 60) as $question) {
+                $text = trim((string) ($question['text'] ?? ''));
+                $options = array_values(array_filter(array_map(
+                    static fn($value) => trim((string) $value),
+                    is_array($question['options'] ?? null) ? $question['options'] : []
+                ), static fn($value) => $value !== ''));
+                $correct = (int) ($question['correct'] ?? -1);
+                if ($text !== '' && count($options) >= 2 && count($options) <= 4 && isset($options[$correct])) {
+                    $cleanQuestions[] = [
+                        'text' => multiplayer_clip($text, 500),
+                        'options' => array_map(
+                            static fn($value) => multiplayer_clip($value, 1000),
+                            $options
+                        ),
+                        'correct' => $correct,
+                    ];
+                }
+            }
+            if (count($cleanQuestions) < 2) {
+                $db->rollBack();
+                json_reply(['error' => 'Add at least two complete study cards.'], 400);
+            }
+            $title = multiplayer_clip(trim((string) ($data['studyTitle'] ?? 'Study Challenge')), 120);
+            $db->prepare(
+                'INSERT INTO room_custom_quizzes (room_id, title, questions_json) VALUES (?, ?, ?)'
+            )->execute([
+                $roomId,
+                $title ?: 'Study Challenge',
+                json_encode($cleanQuestions, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            ]);
+        }
+        $db->prepare(
+            'INSERT INTO room_players (id, room_id, user_id, name) VALUES (?, ?, ?, ?)'
+        )->execute([$playerId, $roomId, $userId, $name]);
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
     }
-    $db->prepare(
-        'INSERT INTO room_players (id, room_id, user_id, name) VALUES (?, ?, ?, ?)'
-    )->execute([$playerId, $roomId, $userId ?: null, $name]);
-    $db->commit();
 
     $roomRow = load_room($db, $code);
     json_reply([
@@ -228,11 +293,11 @@ if ($action === 'join') {
 
     $playerId = bin2hex(random_bytes(12));
     $name = clean_name($data['name'] ?? '');
-    $userId = $data['userId'] ?? null;
+    $userId = multiplayer_existing_user_id($db, $data['userId'] ?? null);
 
     $db->prepare(
         'INSERT INTO room_players (id, room_id, user_id, name) VALUES (?, ?, ?, ?)'
-    )->execute([$playerId, (int) $roomRow['id'], $userId ?: null, $name]);
+    )->execute([$playerId, (int) $roomRow['id'], $userId, $name]);
 
     json_reply([
         'roomCode' => $code,

@@ -8,6 +8,8 @@
 .duel-start .player-name input, .duel-start .category-select { min-height: 58px; background: #fbfcff !important; border-color: #dce3ee !important; }
 .duel-start .duel-rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0 24px; }
 .duel-start .duel-rules span { display: flex; justify-content: center; align-items: center; min-height: 38px; padding: 7px 9px; background: #eef0ff; color: #4b3fca; font-size: 12px; animation: none; }
+.duel-start .invite-note { width: 100%; margin: 0 0 14px; padding: 10px 12px; border: 1px solid #fecdd3; border-radius: 12px; background: #fff1f2; color: #b4233c; font-size: 13px; line-height: 1.45; text-align: center; }
+.duel-start .invite-note:empty { display: none; }
 .duel-start #startGame { min-height: 60px; border-radius: 16px !important; }
 .duel-start #startGame:disabled { cursor: wait !important; opacity: 1 !important; transform: none !important; background: linear-gradient(135deg, #6558ef, #4438cb) !important; }
 .create-room-spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.38); border-top-color: #fff; border-radius: 50%; animation: createRoomSpin .7s linear infinite; }

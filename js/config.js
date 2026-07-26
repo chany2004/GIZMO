@@ -23,11 +23,27 @@
   // Safe parse: read text first, handle empty responses
   function safeJson(r) {
     return r.text().then(function(text) {
-      if (!text || !text.trim()) throw new Error('The server returned an empty response. Check the Vercel Function logs.');
+      if (!text || !text.trim()) {
+        var emptyError = new Error('The server returned an empty response. Please try again.');
+        emptyError.code = 'EMPTY_SERVER_RESPONSE';
+        emptyError.status = r.status;
+        throw emptyError;
+      }
       try {
         return JSON.parse(text);
       } catch (e) {
-        throw new Error('The Vercel API did not return JSON. Check the Function logs and database environment variables.');
+        var normalized = text.toLowerCase();
+        var checkpoint = r.status === 403 && (
+          normalized.includes('vercel security checkpoint') ||
+          normalized.includes('security checkpoint') ||
+          normalized.includes('request challenged')
+        );
+        var parseError = new Error(checkpoint
+          ? 'Online rooms are temporarily unavailable. Please refresh the page and try again.'
+          : 'The room server is temporarily unavailable. Please try again.');
+        parseError.code = checkpoint ? 'VERCEL_SECURITY_CHECKPOINT' : 'INVALID_SERVER_RESPONSE';
+        parseError.status = r.status;
+        throw parseError;
       }
     });
   }
@@ -47,7 +63,12 @@
     try {
       var r = await fetch(GIZMO.apiBase, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        cache: 'no-store',
         body: JSON.stringify(data)
       });
       var d = await safeJson(r);
@@ -57,23 +78,32 @@
     } catch (e) {
       GIZMO.backendAvailable = false;
       
-      // Try direct PHP file as fallback (XAMPP local)
-      var phpCandidates = [endpoint+'.php', endpoint+'/'+endpoint+'.php'];
-      for (var i = 0; i < phpCandidates.length; i++) {
-        try {
-          var r = await fetch(phpCandidates[i], {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-          if (r.ok) {
-            var d = await safeJson(r);
-            if (!d.error) {
-              GIZMO.backendAvailable = true;
-              return d;
+      // Direct PHP files are an XAMPP compatibility fallback. They are not
+      // Vercel Functions, so retrying them there only creates extra HTML/403
+      // responses and hides the original API error.
+      if (!GIZMO.isVercel) {
+        var phpCandidates = [endpoint+'.php', endpoint+'/'+endpoint+'.php'];
+        for (var i = 0; i < phpCandidates.length; i++) {
+          try {
+            var fallbackResponse = await fetch(phpCandidates[i], {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              },
+              credentials: 'same-origin',
+              cache: 'no-store',
+              body: JSON.stringify(data)
+            });
+            if (fallbackResponse.ok) {
+              var fallbackData = await safeJson(fallbackResponse);
+              if (!fallbackData.error) {
+                GIZMO.backendAvailable = true;
+                return fallbackData;
+              }
             }
-          }
-        } catch(err) {}
+          } catch(err) {}
+        }
       }
       throw e;
     }

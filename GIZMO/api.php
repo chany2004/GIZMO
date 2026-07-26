@@ -50,29 +50,66 @@ try {
     ], 500);
 }
 
-// Route to the correct handler
-switch ($endpoint) {
-    case 'auth':
-        // Auth actions: register, login, google, me, updateStats, updatePhoto, addKnown, social
-        require __DIR__ . '/auth.php';
-        break;
-    case 'profile':
-        // Profile actions: register, list, get, follow, isFollowing
-        require __DIR__ . '/profiles.php';
-        break;
-    case 'quiz':
-        // Quiz actions: categories, questions
-        require __DIR__ . '/quiz.php';
-        break;
-    case 'multiplayer':
-        // Multiplayer actions: create, join, start, answer, state
-        require __DIR__ . '/multiplayer.php';
-        break;
-    case 'study':
-        // Study actions: aiStatus, generateCards, saveSet, saveResult, list
-        require __DIR__ . '/study.php';
-        break;
-    default:
-        json_reply(['error' => 'Unknown endpoint: ' . $endpoint], 400);
+// Keep every API failure JSON-shaped. Without this guard, a PDO exception or
+// PHP error becomes an HTML Function response and the browser cannot explain
+// what went wrong.
+try {
+    switch ($endpoint) {
+        case 'auth':
+            // Auth actions: register, login, google, me, updateStats, updatePhoto, addKnown, social
+            require __DIR__ . '/auth.php';
+            break;
+        case 'profile':
+            // Profile actions: register, list, get, follow, isFollowing
+            require __DIR__ . '/profiles.php';
+            break;
+        case 'quiz':
+            // Quiz actions: categories, questions
+            require __DIR__ . '/quiz.php';
+            break;
+        case 'multiplayer':
+            // Multiplayer actions: create, join, start, answer, state
+            require __DIR__ . '/multiplayer.php';
+            break;
+        case 'study':
+            // Study actions: aiStatus, generateCards, saveSet, saveResult, list
+            require __DIR__ . '/study.php';
+            break;
+        default:
+            json_reply(['error' => 'Unknown endpoint: ' . $endpoint], 400);
+    }
+} catch (Throwable $e) {
+    if (isset($db) && $db instanceof PDO && $db->inTransaction()) {
+        $db->rollBack();
+    }
+
+    try {
+        $requestId = bin2hex(random_bytes(4));
+    } catch (Throwable $ignored) {
+        $requestId = substr(sha1(uniqid('', true)), 0, 8);
+    }
+    error_log(sprintf(
+        '[GIZMO %s] %s/%s failed: %s: %s at %s:%d',
+        $requestId,
+        $endpoint ?: 'unknown',
+        $action ?: 'unknown',
+        get_class($e),
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine()
+    ));
+
+    $message = $endpoint === 'multiplayer'
+        ? 'The multiplayer room server could not complete that request. Please try again.'
+        : 'The server could not complete that request. Please try again.';
+    if ($endpoint === 'multiplayer'
+        && preg_match('/room_custom_quizzes|base table|table.+doesn.t exist|SQLSTATE\\[42S02\\]|1146/i', $e->getMessage())) {
+        $message = 'Multiplayer storage is not ready. Import the latest database schema, then try again.';
+    }
+
+    json_reply([
+        'error' => $message,
+        'requestId' => $requestId,
+    ], 500);
 }
 
