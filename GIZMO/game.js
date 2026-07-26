@@ -211,8 +211,9 @@ async function createRoom(){
   try{
     // A slow Vercel/TiDB function must never trap the button in a permanent
     // loading state. After a short wait, open a playable local room instead.
+    var roomCategory=customStudy?'custom_study':category;
     var d=await withTimeout(
-      api('create',{name:playerName(),category:category,customQuestions:customStudyQuestions(),studyTitle:customStudy?.title||''}),
+      api('create',{name:playerName(),category:roomCategory,customQuestions:customStudyQuestions(),studyTitle:customStudy?.title||''}),
       12000,
       'Online room took too long to start.'
     );

@@ -45,7 +45,12 @@ function ensure_quiz_catalog(PDO $db): void
 
 function fetch_categories(PDO $db): array
 {
-    $rows = $db->query('SELECT slug, title, icon FROM quiz_categories ORDER BY id')->fetchAll();
+    // custom_study is an internal foreign-key target for AI-generated rooms,
+    // not a standalone catalog category with reusable trivia questions.
+    $rows = $db->query(
+        "SELECT slug, title, icon FROM quiz_categories
+         WHERE slug <> 'custom_study' ORDER BY id"
+    )->fetchAll();
     $list = [];
     foreach ($rows as $row) {
         $list[] = [

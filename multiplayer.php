@@ -195,6 +195,20 @@ if ($action === 'checkRoom') {
 
 if ($action === 'create') {
     $slug = preg_replace('/[^a-z0-9_]/', '', strtolower($data['category'] ?? 'world'));
+    $customQuestions = $data['customQuestions'] ?? [];
+    $isCustomStudy = is_array($customQuestions) && count($customQuestions) > 0;
+
+    // A generated study set is its own quiz source and must not depend on the
+    // regular category catalog finishing a separate mobile/cold-start request.
+    // Store it under a dedicated hidden category so any AI topic can play.
+    if ($isCustomStudy) {
+        $slug = 'custom_study';
+        $db->prepare(
+            'INSERT INTO quiz_categories (slug, title, icon) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE title = VALUES(title), icon = VALUES(icon)'
+        )->execute([$slug, 'Study Challenge', '']);
+    }
+
     $check = $db->prepare('SELECT id FROM quiz_categories WHERE slug = ? LIMIT 1');
     $check->execute([$slug ?: 'world']);
     $row = $check->fetch();
@@ -224,7 +238,6 @@ if ($action === 'create') {
         )->execute([$code, $catId, $playerId, 'lobby', $now, null]);
 
         $roomId = (int) $db->lastInsertId();
-        $customQuestions = $data['customQuestions'] ?? [];
         if (is_array($customQuestions) && $customQuestions) {
             $cleanQuestions = [];
             foreach (array_slice($customQuestions, 0, 60) as $question) {
