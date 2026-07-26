@@ -1,4 +1,8 @@
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
+if (!user?.id) {
+  try { sessionStorage.setItem('questerAuthReturn', 'dashboard.html'); } catch (e) {}
+  location.replace('index.html?auth=required');
+}
 let currentUserId=user?.id||'';
 
 async function authApi(action,body={}){const r=await fetch('auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})});const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Request failed');return d}
@@ -108,19 +112,6 @@ function render(data,social){
   document.querySelector('#followersCount').textContent=social.followers.length;
   list('#followingList',social.following,'Follow players from a game leaderboard.');
   list('#followersList',social.followers,'No followers yet — invite friends to play.');
-  const grid=document.querySelector('#peopleGrid');
-  const known=(social.known||[]).filter(p=>p.name!==name&&!social.following.some(f=>f.name===p.name)).slice(0,6);
-  if(!known.length){grid.innerHTML='<p>Play a multiplayer room to discover people you may know.</p>';return}
-  known.forEach(person=>{
-    const card=document.createElement('article');
-    const thumb=person.photo?`<span class="player-photo" style="background-image:url('${person.photo}')"></span>`:`<b>${person.name.charAt(0).toUpperCase()}</b>`;
-    card.innerHTML=`${thumb}<strong>${person.name}</strong><p>Played in your room</p><button type="button">Follow</button>`;
-    card.querySelector('button').onclick=async()=>{
-      if(!person.userId)return;
-      try{await profileApi('follow',{id:currentUserId,target:person.userId});location.reload()}catch(e){alert(e.message)}
-    };
-    grid.append(card);
-  });
 }
 
 async function refreshSocial(){

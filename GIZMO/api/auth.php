@@ -7,6 +7,11 @@ require_once __DIR__ . '/../helpers.php';
 $data = read_json();
 $action = $data['action'] ?? '';
 
+if ($action === 'googleConfig') {
+    $clientId = trim(gizmo_env('GOOGLE_CLIENT_ID'));
+    json_reply(['configured' => $clientId !== '', 'clientId' => $clientId]);
+}
+
 try {
     $db = gizmo_db();
 } catch (Throwable $e) {
@@ -55,13 +60,14 @@ if ($action === 'login') {
 }
 
 if ($action === 'google') {
-    $email = strtolower(trim($data['email'] ?? ''));
-    $name = clean_name($data['name'] ?? 'Player');
-    $googleId = trim($data['googleId'] ?? '');
-
-    if (!$email) {
-        json_reply(['error' => 'Google profile email is required.'], 400);
+    try {
+        $profile = verify_google_id_token(trim((string) ($data['credential'] ?? '')));
+    } catch (Throwable $e) {
+        json_reply(['error' => $e->getMessage()], 401);
     }
+    $email = strtolower(trim((string) $profile['email']));
+    $name = clean_name((string) ($profile['name'] ?? explode('@', $email)[0]));
+    $googleId = trim((string) $profile['sub']);
 
     $id = user_id_from_email($email);
     $stmt = $db->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
@@ -69,11 +75,11 @@ if ($action === 'google') {
     $row = $stmt->fetch();
 
     if ($row) {
-        $db->prepare('UPDATE users SET name = ?, google_id = COALESCE(?, google_id) WHERE id = ?')
-            ->execute([$name, $googleId ?: null, $id]);
+        $db->prepare('UPDATE users SET name = ?, google_id = ? WHERE id = ?')
+            ->execute([$name, $googleId, $id]);
     } else {
         $db->prepare('INSERT INTO users (id, name, email, google_id) VALUES (?, ?, ?, ?)')
-            ->execute([$id, $name, $email, $googleId ?: null]);
+            ->execute([$id, $name, $email, $googleId]);
     }
 
     json_reply(['user' => fetch_user($db, $id)]);

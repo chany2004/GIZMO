@@ -22,7 +22,22 @@ if ($action === 'generateCards') {
     require_once __DIR__ . '/study_local.php';
 
     $material = trim((string) ($data['material'] ?? ''));
-    $count = max(2, min(20, (int) ($data['count'] ?? 10)));
+    $requestedCount = $data['count'] ?? 'auto';
+    if ($requestedCount === 'auto' || !is_numeric($requestedCount)) {
+        $wordCount = preg_match_all('/[\p{L}\p{N}]+/u', $material, $matches);
+        $nonEmptyLines = count(array_filter(
+            preg_split('/\R/u', $material) ?: [],
+            static fn($line) => trim((string) $line) !== ''
+        ));
+        // Scale with both prose length and structured lines. The upper safety
+        // bound protects the AI request while avoiding a fixed 10-card result.
+        $count = max(5, min(60, max(
+            (int) ceil($wordCount / 45),
+            (int) ceil($nonEmptyLines / 2)
+        )));
+    } else {
+        $count = max(2, min(60, (int) $requestedCount));
+    }
     $apiKey = gizmo_ai_key();
 
     if (mb_strlen($material) < 30) {
@@ -103,7 +118,7 @@ if ($action === 'generateCards') {
                     json_reply([
                         'cards' => $cards,
                         'mode' => 'local-fallback',
-                        'message' => 'Groq is unreachable on this network, so Gizmo drafted cards locally from your notes.',
+                        'message' => 'Groq is unreachable on this network, so Quester drafted cards locally from your notes.',
                     ]);
                 }
             }

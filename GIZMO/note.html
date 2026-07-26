@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Note — QUESTER</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="note.css?v=5">
+  <script src="auth-guard.js"></script>
+</head>
+<body class="note-page">
+  <header class="topbar note-topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">Q</span>QUESTER</a>
+    <a class="notes-back-link" href="study.html#notes"><span>←</span> My Notes</a>
+  </header>
+
+  <main class="note-wrap">
+    <section class="note-editor">
+      <header class="editor-titlebar">
+        <div class="file-icon">N</div>
+        <div class="file-info">
+          <span>QUESTER DOCUMENT</span>
+          <strong id="saveStatus">New note</strong>
+        </div>
+        <button class="generate-cards top-generate" id="generateFlashcards" type="button"><span>✦</span> Generate Flashcards</button>
+        <button class="delete-note hidden" id="deleteNote" type="button">Delete</button>
+      </header>
+
+      <div class="note-toolbar" aria-label="Note tools">
+        <div class="toolbar-group">
+          <span class="group-label">Format</span>
+          <div>
+            <button data-command="bold" type="button" title="Bold" aria-label="Bold"><b>B</b></button>
+            <button data-command="italic" type="button" title="Italic" aria-label="Italic"><i>I</i></button>
+            <button data-command="underline" type="button" title="Underline" aria-label="Underline"><u>U</u></button>
+          </div>
+        </div>
+        <div class="toolbar-group">
+          <span class="group-label">Paragraph</span>
+          <div>
+            <button data-command="insertUnorderedList" type="button" title="Bulleted list">• List</button>
+            <button data-command="insertOrderedList" type="button" title="Numbered list">1. List</button>
+            <button data-command="justifyLeft" type="button" title="Align left" aria-label="Align left">≡</button>
+            <button data-command="justifyCenter" type="button" title="Align center" aria-label="Align center">≣</button>
+          </div>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <div class="toolbar-group toolbar-actions">
+          <span class="group-label">Note actions</span>
+          <div>
+            <button id="pinNote" type="button" title="Pin note"><span>⌖</span> Pin</button>
+            <button id="favoriteNote" type="button" title="Favorite note"><span>☆</span> Favorite</button>
+            <button id="duplicateNote" type="button" title="Duplicate note"><span>▣</span> Copy</button>
+            <button id="downloadNote" type="button" title="Download as text"><span>↓</span> Download</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="document-workspace">
+        <article class="paper">
+          <input id="noteTitle" class="note-title" maxlength="100" placeholder="Untitled note" autofocus>
+          <div id="noteText" class="note-document" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Start writing..."></div>
+        </article>
+      </div>
+
+      <footer class="note-form-footer">
+        <div class="note-stats">
+          <small id="noteMeta">0 words · 0 characters</small>
+          <small id="updatedMeta">Auto-save is on</small>
+        </div>
+        <div class="footer-actions">
+          <button class="generate-cards footer-generate" id="generateFlashcardsMobile" type="button"><span>✦</span> Make Flashcards</button>
+          <button class="save-note" id="saveNote" type="button"><span>✓</span> Save now</button>
+        </div>
+      </footer>
+    </section>
+  </main>
+
+  <div class="flashcard-modal hidden" id="flashcardModal" role="dialog" aria-modal="true" aria-labelledby="flashcardModalTitle">
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="flashcard-modal-card">
+      <button class="modal-close" type="button" data-close-modal aria-label="Close">×</button>
+      <div id="generatedCardChoices">
+        <div class="modal-icon">✦</div>
+        <p class="modal-eyebrow">NOTE POWER-UP</p>
+        <h2 id="flashcardModalTitle">Your flashcards are ready!</h2>
+        <p id="flashcardModalText">Choose how you want to use your new study set.</p>
+        <div class="generated-preview" id="generatedPreview"></div>
+        <div class="modal-actions">
+          <button class="study-cards-button" id="studyGeneratedCards" type="button"><span>▣</span><b>Study now</b><small>Review the flashcards</small></button>
+          <button class="play-cards-button" id="playGeneratedCards" type="button"><span>♟</span><b>Play with friends</b><small>Create a multiplayer room</small></button>
+        </div>
+      </div>
+      <div class="inline-study hidden" id="inlineStudy">
+        <div class="inline-study-top">
+          <button id="backToGeneratedChoices" type="button">← Options</button>
+          <span id="inlineCardProgress">1 / 1</span>
+        </div>
+        <p class="modal-eyebrow">TAP THE CARD TO FLIP</p>
+        <button class="inline-flashcard" id="inlineFlashcard" type="button">
+          <span id="inlineCardSide">QUESTION</span>
+          <strong id="inlineCardText"></strong>
+          <small>Click to reveal the answer</small>
+        </button>
+        <div class="inline-card-controls">
+          <button id="previousInlineCard" type="button">← Previous</button>
+          <button id="nextInlineCard" type="button">Next →</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="generate-toast hidden" id="generateToast" role="status" aria-live="polite"><span class="toast-spinner"></span><strong>Creating flashcards from your note…</strong></div>
+  <script src="js/config.js"></script>
+  <script src="note.js?v=6"></script>
+</body>
+</html>

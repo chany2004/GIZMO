@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gizmo Duel — GIZMO</title>
+    <title>Quester Duel — QUESTER</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="trivia.css?v=3" />
-    <link rel="stylesheet" href="game.css?v=9" />
+    <link rel="stylesheet" href="game.css?v=10" />
     <link rel="stylesheet" href="start-polish.css?v=3" />
     <link rel="stylesheet" href="profile.css" />
     <link rel="stylesheet" href="lobby.css?v=2" />
@@ -24,22 +24,23 @@
       }
     </style>
     <link rel="stylesheet" href="multiplayer.css" />
+    <script src="auth-guard.js"></script>
   </head>
   <body class="play-page">
     <header class="topbar play-header">
-      <a class="brand" href="index.html"><span class="brand-mark">G</span>GIZMO</a>
-      <a class="back-link" href="index.html">← Back to games</a>
+      <a class="brand" href="index.html"><span class="brand-mark">Q</span>QUESTER</a>
+      <a class="back-link" href="index.html"><span class="back-arrow" aria-hidden="true">&larr;</span><span>Back to games</span></a>
     </header>
 
     <main class="game-screen">
       <!-- Step 1: Setup -->
       <section class="game-shell duel-start" id="startScreen">
-        <p class="eyebrow center"><span></span> GIZMO DUEL</p>
+        <p class="eyebrow center"><span></span> QUESTER DUEL</p>
         <div class="start-icon" id="startIcon">⚔️</div>
         <h1 id="startTitle">Ready to battle with your brain?</h1>
         <p class="game-help">Create a room, share the Room ID with friends, then start when everyone is ready.</p>
         <label class="player-name">Your player name
-          <input id="playerName" maxlength="24" placeholder="e.g. GizmoPlayer" />
+          <input id="playerName" maxlength="24" placeholder="e.g. QuesterPlayer" />
         </label>
         <div class="setup-group">
           <label class="category-label" for="categorySelect">Choose a category</label>
@@ -134,6 +135,6 @@
       </section>
     </main>
     <script src="js/config.js?v=2"></script>
-    <script src="game.js?v=17"></script>
+    <script src="game.js?v=18"></script>
   </body>
 </html>

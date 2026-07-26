@@ -11,13 +11,24 @@ try {
 }
 
 $db->exec('DELETE FROM rooms WHERE created_at < ' . (time() - 86400));
+$db->exec(
+    'CREATE TABLE IF NOT EXISTS room_custom_quizzes (
+        room_id INT UNSIGNED NOT NULL,
+        title VARCHAR(120) NOT NULL,
+        questions_json LONGTEXT NOT NULL,
+        PRIMARY KEY (room_id),
+        CONSTRAINT fk_custom_quiz_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+);
 
 function load_room(PDO $db, string $code): ?array
 {
     $stmt = $db->prepare(
-        'SELECT r.*, c.slug AS category_slug
+        'SELECT r.*, c.slug AS category_slug, cq.title AS custom_title,
+                cq.questions_json AS custom_questions
          FROM rooms r
          JOIN quiz_categories c ON c.id = r.category_id
+         LEFT JOIN room_custom_quizzes cq ON cq.room_id = r.id
          WHERE r.room_code = ? LIMIT 1'
     );
     $stmt->execute([$code]);
@@ -61,9 +72,12 @@ function room_state(PDO $db, array $roomRow): array
     $round = 0;
     $finished = $status === 'finished';
 
+    $customQuestions = json_decode($roomRow['custom_questions'] ?? '', true);
+    $questionCount = is_array($customQuestions) && $customQuestions ? count($customQuestions) : 15;
+
     if ($status === 'started' && $startedAt) {
-        $round = min(14, max(0, intdiv($now - $startedAt, 20)));
-        if ($now - $startedAt >= 300) {
+        $round = min($questionCount - 1, max(0, intdiv($now - $startedAt, 20)));
+        if ($now - $startedAt >= $questionCount * 20) {
             $db = gizmo_db();
             $db->prepare('UPDATE rooms SET status = ? WHERE id = ?')->execute(['finished', $roomRow['id']]);
             $status = 'finished';
@@ -78,6 +92,9 @@ function room_state(PDO $db, array $roomRow): array
         'room' => [
             'code'       => $roomRow['room_code'],
             'category'   => $roomRow['category_slug'],
+            'customQuiz' => !empty($customQuestions),
+            'title'      => $roomRow['custom_title'] ?: null,
+            'questionCount' => $questionCount,
             'hostId'     => $roomRow['host_id'],
             'status'     => $status,
             'createdAt'  => (int) $roomRow['created_at'],
@@ -102,6 +119,29 @@ function sync_user_stats(PDO $db, string $userId, int $score, int $correct, int 
     )->execute([$score, $correct, $total, $userId]);
 }
 
+if ($action === 'checkRoom') {
+    $code = preg_replace('/\D/', '', (string) ($data['roomCode'] ?? ''));
+    if (!preg_match('/^\d{6}$/', $code)) {
+        json_reply(['error' => 'Enter a valid 6-digit Room ID.'], 400);
+    }
+    $roomRow = load_room($db, $code);
+    if (!$roomRow) {
+        json_reply(['error' => 'Room not found. Check the ID and try again.'], 404);
+    }
+    if (($roomRow['status'] ?? '') !== 'lobby') {
+        json_reply(['error' => ($roomRow['status'] ?? '') === 'finished'
+            ? 'This game has already finished.'
+            : 'This game has already started.'], 409);
+    }
+    $count = $db->prepare('SELECT COUNT(*) FROM room_players WHERE room_id = ?');
+    $count->execute([(int) $roomRow['id']]);
+    $playerCount = (int) $count->fetchColumn();
+    if ($playerCount >= 10) {
+        json_reply(['error' => 'This room is already full.'], 409);
+    }
+    json_reply(['available' => true, 'roomCode' => $code, 'playerCount' => $playerCount]);
+}
+
 if ($action === 'create') {
     $slug = preg_replace('/[^a-z0-9_]/', '', strtolower($data['category'] ?? 'world'));
     $check = $db->prepare('SELECT id FROM quiz_categories WHERE slug = ? LIMIT 1');
@@ -115,7 +155,9 @@ if ($action === 'create') {
     $userId = $data['userId'] ?? null;
 
     do {
-        $code = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+        // Six digits are fast to type on a phone and avoid letter/number
+        // confusion when a host shares a Room ID aloud.
+        $code = (string) random_int(100000, 999999);
         $check = $db->prepare('SELECT id FROM rooms WHERE room_code = ?');
         $check->execute([$code]);
     } while ($check->fetch());
@@ -130,6 +172,33 @@ if ($action === 'create') {
     )->execute([$code, $catId, $playerId, 'lobby', $now, null]);
 
     $roomId = (int) $db->lastInsertId();
+    $customQuestions = $data['customQuestions'] ?? [];
+    if (is_array($customQuestions) && $customQuestions) {
+        $cleanQuestions = [];
+        foreach (array_slice($customQuestions, 0, 60) as $question) {
+            $text = trim((string) ($question['text'] ?? ''));
+            $options = array_values(array_filter(array_map(
+                static fn($value) => trim((string) $value),
+                is_array($question['options'] ?? null) ? $question['options'] : []
+            ), static fn($value) => $value !== ''));
+            $correct = (int) ($question['correct'] ?? -1);
+            if ($text !== '' && count($options) >= 2 && count($options) <= 4 && isset($options[$correct])) {
+                $cleanQuestions[] = [
+                    'text' => mb_substr($text, 0, 500),
+                    'options' => array_map(static fn($value) => mb_substr($value, 0, 1000), $options),
+                    'correct' => $correct,
+                ];
+            }
+        }
+        if (count($cleanQuestions) < 2) {
+            $db->rollBack();
+            json_reply(['error' => 'Add at least two complete study cards.'], 400);
+        }
+        $title = mb_substr(trim((string) ($data['studyTitle'] ?? 'Study Challenge')), 0, 120);
+        $db->prepare(
+            'INSERT INTO room_custom_quizzes (room_id, title, questions_json) VALUES (?, ?, ?)'
+        )->execute([$roomId, $title ?: 'Study Challenge', json_encode($cleanQuestions, JSON_UNESCAPED_UNICODE)]);
+    }
     $db->prepare(
         'INSERT INTO room_players (id, room_id, user_id, name) VALUES (?, ?, ?, ?)'
     )->execute([$playerId, $roomId, $userId ?: null, $name]);
@@ -192,6 +261,17 @@ if (!$player) {
 
 $response = [];
 
+if ($action === 'questions') {
+    $customQuestions = json_decode($roomRow['custom_questions'] ?? '', true);
+    if (!is_array($customQuestions) || !$customQuestions) {
+        json_reply(['error' => 'This room does not have custom study questions.'], 404);
+    }
+    $publicQuestions = array_map(static function ($question) {
+        return ['text' => $question['text'], 'options' => $question['options']];
+    }, $customQuestions);
+    json_reply(['title' => $roomRow['custom_title'], 'questions' => $publicQuestions]);
+}
+
 if ($action === 'start') {
     if ($roomRow['host_id'] !== $playerId) {
         json_reply(['error' => 'Only the host can start the game.'], 403);
@@ -206,11 +286,15 @@ if ($action === 'answer') {
     $round = (int) ($data['round'] ?? -1);
     $answer = (int) ($data['answer'] ?? -1);
 
-    if ($round < 0 || $round >= 15 || $round !== (int) $player['round']) {
+    $customQuestions = json_decode($roomRow['custom_questions'] ?? '', true);
+    $questionTotal = is_array($customQuestions) && $customQuestions ? count($customQuestions) : 15;
+    if ($round < 0 || $round >= $questionTotal || $round !== (int) $player['round']) {
         json_reply(['error' => 'That question is already finished.'], 409);
     }
 
-    $keys = answer_keys($db, (int) $roomRow['category_id']);
+    $keys = is_array($customQuestions) && $customQuestions
+        ? array_map(static fn($question) => (int) $question['correct'], $customQuestions)
+        : answer_keys($db, (int) $roomRow['category_id']);
     $correct = isset($keys[$round]) && $answer === $keys[$round];
 
     $score = (int) $player['score'];
@@ -249,18 +333,19 @@ $roomRow = load_room($db, $code);
 $state = room_state($db, $roomRow);
 
 if ($state['finished']) {
+    $totalQuestions = (int) ($state['room']['questionCount'] ?? 15);
     foreach ($state['room']['players'] as $p) {
-        if ($p['userId'] && $p['round'] >= 15) {
+        if ($p['userId'] && $p['round'] >= $totalQuestions) {
             $done = $db->prepare(
                 'SELECT id FROM game_sessions WHERE user_id = ? AND played_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE) LIMIT 1'
             );
             $done->execute([$p['userId']]);
             if (!$done->fetch()) {
-                sync_user_stats($db, $p['userId'], $p['score'], $p['correct'], 15);
+                sync_user_stats($db, $p['userId'], $p['score'], $p['correct'], $totalQuestions);
                 $catId = category_id($db, $state['room']['category']);
                 $db->prepare(
-                    'INSERT INTO game_sessions (user_id, category_id, score, correct, total) VALUES (?, ?, ?, ?, 15)'
-                )->execute([$p['userId'], $catId, $p['score'], $p['correct']]);
+                    'INSERT INTO game_sessions (user_id, category_id, score, correct, total) VALUES (?, ?, ?, ?, ?)'
+                )->execute([$p['userId'], $catId, $p['score'], $p['correct'], $totalQuestions]);
             }
         }
     }

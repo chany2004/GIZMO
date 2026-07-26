@@ -148,6 +148,8 @@ function showSource(source) {
   var isAi = source === 'ai';
   $('#manualSource').classList.toggle('hidden', isAi);
   $('#aiSource').classList.toggle('hidden', !isAi);
+  $('#studyTitleField').classList.toggle('hidden', !isAi);
+  $('#createSet').classList.add('hidden');
   var btns = document.querySelectorAll('.tab-btn');
   for (var i = 0; i < btns.length; i++) {
     btns[i].classList.toggle('active', btns[i].dataset.source === source);
@@ -159,6 +161,7 @@ var tabBtns = document.querySelectorAll('.tab-btn');
 for (var i = 0; i < tabBtns.length; i++) {
   tabBtns[i].addEventListener('click', function() { showSource(this.dataset.source); });
 }
+if (location.hash === '#notes') showSource('manual');
 
 // Check AI Status
 async function initAiStatus() {
@@ -176,24 +179,183 @@ async function initAiStatus() {
 initAiStatus();
 
 // File Upload Logic
-function loadFile(file) {
+async function readPdfText(file) {
+  var pdfjs = await import('https://mozilla.github.io/pdf.js/build/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.mjs';
+  var bytes = new Uint8Array(await file.arrayBuffer());
+  var pdf = await pdfjs.getDocument({ data: bytes }).promise;
+  var pages = [];
+  for (var pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    var page = await pdf.getPage(pageNumber);
+    var content = await page.getTextContent();
+    var text = content.items.map(function(item) { return item.str || ''; }).join(' ').trim();
+    if (text) pages.push(text);
+  }
+  return pages.join('\n\n');
+}
+
+// Notes library: title tiles open a separate editor and support multiple notes.
+var noteText = $('#noteText');
+var noteTitle = $('#noteTitle');
+var noteSaveStatus = $('#noteSaveStatus');
+var notes = [];
+var activeNoteId = null;
+var noteDirty = false;
+try {
+  notes = JSON.parse(localStorage.getItem('questerNotes') || '[]');
+  if (!Array.isArray(notes)) notes = [];
+  var legacyNote = JSON.parse(localStorage.getItem('questerSavedNote') || 'null');
+  if (!notes.length && legacyNote && (legacyNote.text || legacyNote.title)) {
+    notes.push({ id: String(legacyNote.savedAt || Date.now()), title: legacyNote.title || 'Untitled note', text: legacyNote.text || '', savedAt: legacyNote.savedAt || Date.now() });
+    localStorage.setItem('questerNotes', JSON.stringify(notes));
+  }
+} catch(e) { notes = []; }
+
+function updateNoteMeta() {
+  var value = noteText.value;
+  $('#noteMeta').textContent = value.length + ' character' + (value.length === 1 ? '' : 's');
+}
+
+function persistNotes() {
+  localStorage.setItem('questerNotes', JSON.stringify(notes));
+}
+
+function renderNotesList() {
+  var list = $('#notesList');
+  list.innerHTML = '';
+  notes.slice().sort(function(a, b) { return Number(!!b.pinned) - Number(!!a.pinned) || (b.savedAt || 0) - (a.savedAt || 0); }).forEach(function(note) {
+    var tile = document.createElement('div');
+    tile.className = 'note-title-tile';
+    var preview = String(note.text || '').trim().replace(/\s+/g, ' ');
+    var date = new Date(note.savedAt || Date.now()).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    tile.innerHTML = '<button class="note-tile-open" type="button"><span class="note-tile-icon">📝</span><span class="note-tile-copy"><strong></strong><small></small></span></button><div class="note-menu-wrap"><button class="note-menu-trigger" type="button" aria-label="Note options" aria-expanded="false">⋮</button><div class="note-menu hidden"><button data-note-action="rename" type="button">Rename</button><button data-note-action="duplicate" type="button">Duplicate</button><button data-note-action="pin" type="button"></button><button class="danger" data-note-action="delete" type="button">Delete</button></div></div>';
+    tile.querySelector('.note-tile-icon').textContent = note.favorite ? '⭐' : note.pinned ? '📌' : '📝';
+    tile.querySelector('strong').textContent = note.title || 'Untitled note';
+    tile.querySelector('small').textContent = preview ? preview.slice(0, 75) : 'Empty note · ' + date;
+    tile.querySelector('[data-note-action="pin"]').textContent = note.pinned ? 'Unpin' : 'Pin to top';
+    tile.querySelector('.note-tile-open').addEventListener('click', function() { openNote(note.id); });
+    var trigger = tile.querySelector('.note-menu-trigger');
+    var menu = tile.querySelector('.note-menu');
+    trigger.addEventListener('click', function(event) {
+      event.stopPropagation();
+      document.querySelectorAll('.note-menu').forEach(function(other) {
+        if (other !== menu) {
+          other.classList.add('hidden');
+          other.closest('.note-title-tile')?.classList.remove('menu-open');
+        }
+      });
+      menu.classList.toggle('hidden');
+      tile.classList.toggle('menu-open', !menu.classList.contains('hidden'));
+      trigger.setAttribute('aria-expanded', String(!menu.classList.contains('hidden')));
+    });
+    menu.addEventListener('click', function(event) {
+      var action = event.target.dataset.noteAction;
+      if (!action) return;
+      if (action === 'rename') {
+        var renamed = window.prompt('Rename note', note.title || 'Untitled note');
+        if (renamed && renamed.trim()) note.title = renamed.trim();
+      } else if (action === 'duplicate') {
+        var copy = Object.assign({}, note, { id: String(Date.now()) + 'copy', title: (note.title || 'Untitled note') + ' — Copy', savedAt: Date.now(), pinned: false });
+        notes.push(copy);
+      } else if (action === 'pin') {
+        note.pinned = !note.pinned;
+      } else if (action === 'delete') {
+        if (!window.confirm('Delete “' + (note.title || 'Untitled note') + '”?')) return;
+        notes = notes.filter(function(item) { return item.id !== note.id; });
+      }
+      persistNotes();
+      renderNotesList();
+    });
+    list.appendChild(tile);
+  });
+  $('#notesEmpty').classList.toggle('hidden', notes.length > 0);
+}
+
+function openNote(id) {
+  location.href = id ? 'note.html?id=' + encodeURIComponent(id) : 'note.html?new=1';
+}
+
+function closeNoteEditor() {
+  if (noteDirty && !window.confirm('Leave without saving your changes?')) return;
+  $('#noteEditor').classList.add('hidden');
+  $('#notesLibrary').classList.remove('hidden');
+  activeNoteId = null;
+  renderNotesList();
+}
+
+function saveCurrentNote() {
+  var savedAt = Date.now();
+  var note = { id: activeNoteId || String(savedAt) + Math.random().toString(16).slice(2), title: noteTitle.value.trim() || 'Untitled note', text: noteText.value, savedAt: savedAt };
+  var index = notes.findIndex(function(item) { return item.id === activeNoteId; });
+  if (index >= 0) notes[index] = note; else notes.push(note);
+  activeNoteId = note.id;
+  persistNotes();
+  noteDirty = false;
+  noteSaveStatus.textContent = 'Saved just now';
+  $('#deleteNote').classList.remove('hidden');
+  updateNoteMeta();
+}
+renderNotesList();
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('.note-menu-wrap')) {
+    document.querySelectorAll('.note-menu').forEach(function(menu) { menu.classList.add('hidden'); });
+    document.querySelectorAll('.note-title-tile.menu-open').forEach(function(tile) { tile.classList.remove('menu-open'); });
+  }
+});
+updateNoteMeta();
+function markNoteDirty() {
+  noteDirty = true;
+  noteSaveStatus.textContent = 'Unsaved changes';
+  updateNoteMeta();
+}
+noteText.addEventListener('input', markNoteDirty);
+noteTitle.addEventListener('input', markNoteDirty);
+$('#newNote').addEventListener('click', function() { openNote(null); });
+$('#backToNotes').addEventListener('click', closeNoteEditor);
+$('#saveNote').addEventListener('click', saveCurrentNote);
+$('#deleteNote').addEventListener('click', function() {
+  if (!activeNoteId || !window.confirm('Delete this note?')) return;
+  notes = notes.filter(function(note) { return note.id !== activeNoteId; });
+  persistNotes();
+  noteDirty = false;
+  closeNoteEditor();
+});
+noteText.addEventListener('keydown', function(event) {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+    event.preventDefault();
+    saveCurrentNote();
+  }
+});
+
+async function loadFile(file) {
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    $('#error').textContent = 'Please choose a file smaller than 2 MB.';
+  if (file.size > 10 * 1024 * 1024) {
+    $('#error').textContent = 'Please choose a file smaller than 10 MB.';
     return;
   }
-  if (!/\.(txt|md|csv)$/i.test(file.name)) {
-    $('#error').textContent = 'Use a TXT, Markdown, or CSV notes file.';
+  if (!/\.(pdf|txt|md|csv)$/i.test(file.name)) {
+    $('#error').textContent = 'Use a PDF, TXT, Markdown, or CSV notes file.';
     return;
   }
-  var reader = new FileReader();
-  reader.onload = function() {
-    $('#sourceText').value = String(reader.result || '');
-    $('#fileName').textContent = file.name;
+  dropZone.classList.add('is-loading');
+  $('#fileName').textContent = 'Reading ' + file.name + '...';
+  $('#error').textContent = '';
+  try {
+    var text = /\.pdf$/i.test(file.name) ? await readPdfText(file) : await file.text();
+    if (!text.trim()) throw new Error('No readable text was found. Scanned PDFs need OCR first.');
+    var wasTrimmed = text.length > 30000;
+    $('#sourceText').value = text.slice(0, 30000);
+    $('#fileName').textContent = '✓ ' + file.name;
+    dropZone.classList.add('has-file');
     $('#error').textContent = '';
-  };
-  reader.onerror = function() { $('#error').textContent = 'Could not read that file.'; };
-  reader.readAsText(file);
+    if (wasTrimmed) $('#error').textContent = 'The first 30,000 characters were imported.';
+  } catch (error) {
+    dropZone.classList.remove('has-file');
+    $('#fileName').textContent = 'No file selected';
+    $('#error').textContent = error && error.message ? error.message : 'Could not read that file.';
+  } finally {
+    dropZone.classList.remove('is-loading');
+  }
 }
 
 $('#fileInput').addEventListener('change', function(e) { loadFile(e.target.files[0]); });
@@ -217,7 +379,7 @@ $('#generateCards').addEventListener('click', async function() {
   $('#error').textContent = '';
 
   try {
-    var data = await studyApi('generateCards', { material: material, count: Number($('#aiCardCount').value) });
+    var data = await studyApi('generateCards', { material: material, count: $('#aiCardCount').value });
     var generated = [];
     if (data.cards) {
       for (var i = 0; i < data.cards.length; i++) {
@@ -226,8 +388,8 @@ $('#generateCards').addEventListener('click', async function() {
     }
     if (generated.length < 2) throw new Error('Could not make enough usable cards.');
     setCardRows(generated);
-    showSource('manual');
-    $('#error').textContent = '✨ ' + generated.length + ' flashcards generated! Review them below.';
+    $('#error').textContent = '✨ ' + generated.length + ' flashcards generated! Starting your study set...';
+    $('#createSet').click();
   } catch (err) {
     $('#error').textContent = err.message;
   } finally {
@@ -289,6 +451,13 @@ function move(direction) {
 $('#previousCard').addEventListener('click', function() { move(-1); });
 $('#nextCard').addEventListener('click', function() { move(1); });
 $('#knownCard').addEventListener('click', function() { known++; move(1); });
+
+$('#invitePlayers').addEventListener('click', function() {
+  if (!cards || cards.length < 2) return;
+  var title = $('#setTitle').value.trim() || 'My Study Challenge';
+  localStorage.setItem('gizmoMultiplayerStudy', JSON.stringify({ title: title, cards: cards }));
+  location.href = 'game.html?study=1';
+});
 
 // Quiz Mode
 $('#modeButton').addEventListener('click', function() {
@@ -402,3 +571,20 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowRight') move(1);
   if (e.key.toLowerCase() === 'k') { known++; move(1); }
 });
+
+(function openGeneratedNoteSet() {
+  if (new URLSearchParams(location.search).get('generated') !== '1') return;
+  try {
+    var saved = JSON.parse(localStorage.getItem('gizmoStudySet') || 'null');
+    if (!saved || !Array.isArray(saved.cards) || saved.cards.length < 2) return;
+    cards = saved.cards.filter(function(card) { return card && card.q && card.a; });
+    if (cards.length < 2) return;
+    $('#setTitle').value = saved.title || 'My Note Flashcards';
+    $('#setName').textContent = (saved.title || 'My Note Flashcards').toUpperCase();
+    $('#builder').classList.add('hidden');
+    $('#learn').classList.remove('hidden');
+    cardIndex = 0;
+    known = 0;
+    renderCard();
+  } catch (e) {}
+})();

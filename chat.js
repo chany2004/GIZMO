@@ -1,4 +1,4 @@
-/* GIZMO — AI Chat Assistant Widget */
+/* QUESTER — AI Chat Assistant Widget */
 
 (function () {
   var chatHistory = [];
@@ -9,17 +9,17 @@
 
     var d = document.createElement('div');
     d.innerHTML =
-      '<button class="gizmo-ai-launcher" id="gizmoAiLauncher" type="button" aria-label="Open Gizmo AI Chat">' +
+      '<button class="gizmo-ai-launcher" id="gizmoAiLauncher" type="button" aria-label="Open Quester AI Chat">' +
         '<span class="bot-icon">🤖</span>' +
-        '<span>Ask Gizmo AI</span>' +
+        '<span>Ask Quester AI</span>' +
         '<span class="live-pulse"></span>' +
       '</button>' +
-      '<div class="gizmo-ai-window hidden" id="gizmoAiWindow" role="dialog" aria-label="Gizmo AI Assistant">' +
+      '<div class="gizmo-ai-window hidden" id="gizmoAiWindow" role="dialog" aria-label="Quester AI Assistant">' +
         '<div class="ai-chat-header">' +
           '<div class="ai-header-info">' +
             '<div class="ai-avatar">🤖</div>' +
             '<div class="ai-title-wrap">' +
-              '<strong>Gizmo ChatGPT AI</strong>' +
+              '<strong>Quester ChatGPT AI</strong>' +
               '<small id="aiProviderBadge">Active &amp; Ready ⚡</small>' +
             '</div>' +
           '</div>' +
@@ -27,7 +27,7 @@
         '</div>' +
         '<div class="ai-chat-body" id="aiChatBody">' +
           '<div class="chat-bubble ai">' +
-            'Hello! I am <strong>Gizmo AI</strong> 🤖. Ask me anything! I can explain complex topics, answer trivia, give study tips, or help you learn.' +
+            'Hello! I am <strong>Quester AI</strong> 🤖. Ask me anything! I can explain complex topics, answer trivia, give study tips, or help you learn.' +
             '<div class="chat-suggestions">' +
               '<button class="chip-btn" data-prompt="Explain Quantum Physics simply">💡 Quantum Physics</button>' +
               '<button class="chip-btn" data-prompt="Give me 5 best study tips for exams">📝 Study Tips</button>' +
@@ -37,7 +37,7 @@
         '</div>' +
         '<div class="ai-chat-footer">' +
           '<form class="chat-form" id="aiChatForm">' +
-            '<input id="aiChatInput" type="text" placeholder="Ask Gizmo AI a question..." maxlength="2000" autocomplete="off" required>' +
+            '<input id="aiChatInput" type="text" placeholder="Ask Quester AI a question..." maxlength="2000" autocomplete="off" required>' +
             '<button class="chat-send-btn" id="aiChatSend" type="submit">Send ➔</button>' +
           '</form>' +
         '</div>' +

@@ -3,6 +3,14 @@ let category='world',roomCode='',playerId='',room=null,currentRound=0,answered=f
 let categories={},questions=[],questionCache={};
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
+const launchParams=new URLSearchParams(location.search);
+let customStudy=null;
+if(launchParams.get('study')==='1'){
+  try{
+    var savedStudy=JSON.parse(localStorage.getItem('gizmoMultiplayerStudy')||'null');
+    if(savedStudy&&Array.isArray(savedStudy.cards)&&savedStudy.cards.length>=2)customStudy=savedStudy;
+  }catch(e){}
+}
 $('#playerName').value=user?.name||'';
 const offlineWorldQuestions=[
   {text:'Largest ocean?',options:['Atlantic','Pacific','Indian','Arctic'],correct:1},
@@ -52,7 +60,26 @@ function setRoomCreating(active,message){
   if(message)$('#roomCreationMessage').textContent=message;
 }
 function cleanCategoryIcon(slug,icon){return !icon||/[ÃÂïð]/.test(icon)?(categoryIcons[slug]||'🎯'):icon}
-function catInfo(){return categories[category]||{title:category,icon:'❓'}}
+function catInfo(){
+  if(room?.customQuiz)return{title:room.title||'Study Challenge',icon:'📚'};
+  if(customStudy)return{title:customStudy.title||'Study Challenge',icon:'📚'};
+  return categories[category]||{title:category,icon:'❓'}
+}
+function customStudyQuestions(){
+  if(!customStudy)return[];
+  var allAnswers=customStudy.cards.map(function(card){return String(card.a||'').trim()}).filter(Boolean);
+  return customStudy.cards.slice(0,60).map(function(card,index){
+    var correct=String(card.a||'').trim();
+    var distractors=allAnswers.filter(function(answer,i){return i!==index&&answer!==correct});
+    distractors=distractors.filter(function(answer,i,list){return list.indexOf(answer)===i}).slice(0,3);
+    ['None of the above','All of the above','Not enough information'].forEach(function(filler){
+      if(distractors.length<3&&filler!==correct&&!distractors.includes(filler))distractors.push(filler);
+    });
+    var options=[correct].concat(distractors).slice(0,4);
+    for(var i=options.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var temp=options[i];options[i]=options[j];options[j]=temp}
+    return{text:String(card.q||'').trim(),options:options,correct:options.indexOf(correct)};
+  }).filter(function(question){return question.text&&question.options[question.correct]});
+}
 
 // Safe fetch helper — reads text first to avoid "Unexpected end of JSON input" on empty responses
 async function safeFetch(url, data) {
@@ -134,23 +161,25 @@ function fallbackQuestions(){
   });
 }
 
-async function ensureQuestions(slug){
-  if(questionCache[slug]?.length){questions=questionCache[slug];category=slug;return}
+async function ensureQuestions(slug,isCustom){
+  var cacheKey=isCustom?'study:'+roomCode:slug;
+  if(questionCache[cacheKey]?.length){questions=questionCache[cacheKey];category=slug;return}
   try{
     // Never leave the game screen waiting forever for a slow cold start or
     // unavailable hosted database. The local round keeps the game playable.
     var d=await Promise.race([
-      quizApi('questions',{slug:slug}),
+      isCustom?api('questions'):quizApi('questions',{slug:slug}),
       new Promise(function(_,reject){setTimeout(function(){reject(new Error('Question request timed out.'))},4000)})
     ]);
     if(!Array.isArray(d.questions)||!d.questions.length)throw new Error('No questions found.');
-    questionCache[slug]=d.questions;
+    questionCache[cacheKey]=d.questions;
     usingLocalQuestions=false;
   }catch(e){
-    questionCache[slug]=fallbackQuestions();
+    if(isCustom)throw e;
+    questionCache[cacheKey]=fallbackQuestions();
     usingLocalQuestions=true;
   }
-  questions=questionCache[slug];
+  questions=questionCache[cacheKey];
   category=slug;
 }
 
@@ -183,7 +212,7 @@ async function createRoom(){
     // A slow Vercel/TiDB function must never trap the button in a permanent
     // loading state. After a short wait, open a playable local room instead.
     var d=await withTimeout(
-      api('create',{name:playerName(),category:category}),
+      api('create',{name:playerName(),category:category,customQuestions:customStudyQuestions(),studyTitle:customStudy?.title||''}),
       3000,
       'Online room took too long to start.'
     );
@@ -196,7 +225,7 @@ async function createRoom(){
     // This gives phone players a chance to share or copy the Room ID too.
     enterLobby(d.state);
   }catch(e){
-    if(window.GIZMO?.isVercel){
+    if(window.GIZMO?.isVercel&&!customStudy){
       startOfflineRoom('Quick-play room created because the online room is taking too long.');
       return;
     }
@@ -227,7 +256,7 @@ function enterLobby(state){
   showScreen('lobbyScreen');
 
   var host=isHost();
-  var info=categories[room.category]||catInfo();
+  var info=catInfo();
   $('#lobbyRoomCode').textContent=roomCode;
   $('#lobbyIcon').textContent=info.icon||'🏆';
   $('#lobbyCategory').textContent=info.title||room.category;
@@ -316,7 +345,7 @@ async function enterGame(state){
 async function renderGame(state){
   room=state.room;
   if(room.status==='lobby'){enterLobby(state);return}
-  await ensureQuestions(room.category);
+  await ensureQuestions(room.category,room.customQuiz);
 
   var mine=room.players.find(function(p){return p.id===playerId})||{score:0,streak:0,round:0};
   currentRound=mine.round||0;
@@ -490,6 +519,12 @@ $('#categorySelect').addEventListener('change',function(e){selectCategory(e.targ
 
 (async function(){
   await loadCategories();
-  var invite=new URLSearchParams(location.search).get('room');
+  if(customStudy){
+    $('.setup-group')?.classList.add('hidden');
+    updateCategoryUI();
+    $('#startTitle').textContent=customStudy.title||'Study Challenge';
+    $('.game-help').textContent='Create a room, invite your friends, and play this AI study set together.';
+  }
+  var invite=launchParams.get('room');
   if(invite)joinRoom(invite);
 })();

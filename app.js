@@ -46,19 +46,56 @@ const profileApi = (action, body = {}) => {
   if (window.GIZMO?.profileApi) return window.GIZMO.profileApi(action, body);
   return safeFetch('profiles.php', {action,...body});
 };
-function toast(message){const t=$('#toast');t.textContent=message;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),3200)}function closeModal(id){$(`#${id}`).classList.add('hidden')}
-function openAuth(mode='login'){state.mode=mode;$('#authTitle').textContent=mode==='login'?'Play with your brain on.':'Your next streak starts now.';$('#authSubtitle').textContent=mode==='login'?'Log in to save your scores and keep your streak.':'Create a free account and make every game count.';$('#authSubmit').innerHTML=`${mode==='login'?'Log in':'Create account'} <span>→</span>`;$('#switchCopy').innerHTML=mode==='login'?'New to Gizmo? <button type="button" data-switch-auth="signup">Create an account</button>':'Already playing? <button type="button" data-switch-auth="login">Log in</button>';$('#formNote').textContent='';authModal.classList.remove('hidden')}
-function saveUser(user){state.user=user;localStorage.setItem('gizmoUser',JSON.stringify(user));renderUser()}
-function renderUser(){const guest=$('#guestActions'),profile=$('#profileButton');if(!state.user?.id){guest?.classList.remove('hidden');profile?.classList.add('hidden');return}guest?.classList.add('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=`${state.user.name}'s player dashboard`;profile.classList.remove('hidden')}
+function toast(message){const t=$('#toast');t.textContent=message;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),3200)}function closeModal(id){if(id==='authModal'&&document.body.classList.contains('auth-required'))return;$(`#${id}`).classList.add('hidden')}
+function openAuth(mode='login'){state.mode=mode;$('#authTitle').textContent=mode==='login'?'Play with your brain on.':'Your next streak starts now.';$('#authSubtitle').textContent=mode==='login'?'Log in to save your scores and keep your streak.':'Create a free account and make every game count.';$('#authSubmit').innerHTML=`${mode==='login'?'Log in':'Create account'} <span>→</span>`;$('#switchCopy').innerHTML=mode==='login'?'New to Quester? <button type="button" data-switch-auth="signup">Create an account</button>':'Already playing? <button type="button" data-switch-auth="login">Log in</button>';$('#formNote').textContent='';authModal.classList.remove('hidden')}
+function saveUser(user){state.user=user;localStorage.setItem('gizmoUser',JSON.stringify(user));renderUser();if(document.body.classList.contains('auth-required')){let next='';try{next=sessionStorage.getItem('questerAuthReturn')||'';sessionStorage.removeItem('questerAuthReturn')}catch(e){}document.body.classList.remove('auth-required');if(next&&!/^index\.html(?:[?#]|$)/i.test(next)){location.href=next}}}
+function renderUser(){const guest=$('#guestActions'),profile=$('#profileButton');if(!state.user?.id&&!state.user?.guest){guest?.classList.remove('hidden');profile?.classList.add('hidden');return}guest?.classList.add('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.guest?'G':state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=state.user.guest?'Guest mode — create an account to save online':`${state.user.name}'s player dashboard`;profile.classList.remove('hidden')}
 function avatarThumb(photo,name){return photo?`<span class="player-photo" style="background-image:url('${photo}')"></span>`:`<b>${name.charAt(0).toUpperCase()}</b>`}
 async function login(user){saveUser(user);closeModal('authModal');toast(`Welcome${user.name?`, ${user.name}`:''}! Your streak starts today. ✨`)}
 function goToProfile(event){event?.preventDefault();if(!state.user?.id){openAuth('login');toast('Log in to view your profile.');return}window.location.href='dashboard.html'}
-async function hydrateUser(){if(!state.user)return renderUser();if(!state.user.id){localStorage.removeItem('gizmoUser');state.user=null;renderUser();return}try{const d=await authApi('me',{id:state.user.id});saveUser(d.user)}catch{localStorage.removeItem('gizmoUser');state.user=null;renderUser()}}
+async function hydrateUser(){if(!state.user)return renderUser();if(state.user.guest)return renderUser();if(!state.user.id){localStorage.removeItem('gizmoUser');state.user=null;renderUser();requireLogin();return}try{const d=await authApi('me',{id:state.user.id});saveUser(d.user)}catch{localStorage.removeItem('gizmoUser');state.user=null;renderUser();requireLogin()}}
+function requireLogin(){if(state.user?.id||state.user?.guest)return;document.body.classList.add('auth-required');openAuth('login')}
 document.addEventListener('click',event=>{const auth=event.target.closest('[data-open-auth]');if(auth){event.preventDefault();openAuth(auth.dataset.openAuth)}const sw=event.target.closest('[data-switch-auth]');if(sw){event.preventDefault();openAuth(sw.dataset.switchAuth)}const close=event.target.closest('[data-close]');if(close)closeModal(close.dataset.close);const game=event.target.closest('[data-game]');if(game)startGame(game.dataset.game)});const howButton=$('#showHow');if(howButton)howButton.addEventListener('click',()=>toast('Create a room, invite friends, then climb the leaderboard.'));$('#profileButton')?.addEventListener('click',goToProfile);$('#viewProfileLink')?.addEventListener('click',goToProfile);
-$('#authForm').addEventListener('submit',async event=>{event.preventDefault();const email=$('#email').value.trim(),password=$('#password').value;if(password.length<6){$('#formNote').textContent='Please use at least 6 characters for your password.';return}try{const d=await authApi(state.mode==='login'?'login':'register',{email,password,name:email.split('@')[0]});await login(d.user)}catch(e){$('#formNote').textContent=e.message}});$('#googleSignIn').addEventListener('click',()=>{const clientId=window.GIZMO_GOOGLE_CLIENT_ID;if(!clientId||!window.google){toast('Google sign-in needs your Google Client ID in app.js.');return}google.accounts.id.initialize({client_id:clientId,callback:async response=>{try{const profile=JSON.parse(atob(response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));const d=await authApi('google',{email:profile.email,name:profile.name,googleId:profile.sub});await login(d.user)}catch(e){toast(e.message)}}});google.accounts.id.prompt()});
+$('#authForm').addEventListener('submit',async event=>{event.preventDefault();const email=$('#email').value.trim(),password=$('#password').value;if(password.length<6){$('#formNote').textContent='Please use at least 6 characters for your password.';return}try{const d=await authApi(state.mode==='login'?'login':'register',{email,password,name:email.split('@')[0]});await login(d.user)}catch(e){$('#formNote').textContent=e.message}});
+$('#guestSignIn').addEventListener('click',()=>{saveUser({id:null,name:'Guest',guest:true,offline:true});closeModal('authModal');toast('Guest mode is on. Create an account anytime to save online.')});
+async function waitForGoogleIdentity(){
+  for(let attempt=0;attempt<40;attempt++){
+    if(window.google?.accounts?.id)return window.google.accounts.id;
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+  throw new Error('Google Sign-In could not load. Check your internet connection and refresh.');
+}
+async function setupGoogleSignIn(){
+  const container=$('#googleSignIn');
+  try{
+    const [identity,config]=await Promise.all([waitForGoogleIdentity(),authApi('googleConfig')]);
+    if(!config.configured||!config.clientId)throw new Error('Google Sign-In is not configured on the server.');
+    identity.initialize({
+      client_id:config.clientId,
+      ux_mode:'popup',
+      auto_select:false,
+      use_fedcm_for_prompt:true,
+      callback:async response=>{
+        $('#formNote').textContent='';
+        try{
+          const result=await authApi('google',{credential:response.credential});
+          await login(result.user);
+        }catch(error){
+          $('#formNote').textContent=error.message;
+        }
+      }
+    });
+    const width=Math.max(240,Math.min(400,Math.floor(container.getBoundingClientRect().width||400)));
+    identity.renderButton(container,{type:'standard',theme:'outline',size:'medium',text:'signin_with',shape:'rectangular',logo_alignment:'left',width:width,locale:'en'});
+  }catch(error){
+    container.classList.add('google-setup-error');
+    container.textContent=error.message;
+  }
+}
+setupGoogleSignIn();
 function startGame(type){window.location.href=`game.html?category=${encodeURIComponent(type)}`}
-renderUser();hydrateUser();
-const joinTrigger=$('#openJoinRoom'),joinModal=$('#joinRoomModal'),joinForm=$('#joinRoomForm');if(joinTrigger){joinTrigger.addEventListener('click',()=>{joinModal.classList.remove('hidden');setTimeout(()=>$('#homeRoomCode').focus(),0)});$('#closeJoinRoom').addEventListener('click',()=>joinModal.classList.add('hidden'));joinForm.addEventListener('submit',event=>{event.preventDefault();const code=$('#homeRoomCode').value.trim().toUpperCase();if(code)window.location.href=`game.html?room=${encodeURIComponent(code)}`})}
+renderUser();if(!state.user?.id||new URLSearchParams(location.search).get('auth')==='required')requireLogin();hydrateUser();
+const joinTrigger=$('#openJoinRoom'),joinModal=$('#joinRoomModal'),joinForm=$('#joinRoomForm');if(joinTrigger){joinTrigger.addEventListener('click',()=>{joinModal.classList.remove('hidden');$('#joinRoomNote').textContent='';setTimeout(()=>$('#homeRoomCode').focus(),0)});$('#closeJoinRoom').addEventListener('click',()=>joinModal.classList.add('hidden'));$('#homeRoomCode').addEventListener('input',event=>{event.target.value=event.target.value.replace(/\D/g,'').slice(0,6);$('#joinRoomNote').textContent=''});joinForm.addEventListener('submit',async event=>{event.preventDefault();const code=$('#homeRoomCode').value.trim(),note=$('#joinRoomNote'),button=$('#joinRoomSubmit');if(!/^\d{6}$/.test(code)){note.textContent='Enter a valid 6-digit Room ID.';return}button.disabled=true;button.textContent='Checking room…';note.textContent='';try{const result=window.GIZMO?.multiplayerApi?await window.GIZMO.multiplayerApi('checkRoom',{roomCode:code}):await safeFetch('multiplayer.php',{action:'checkRoom',roomCode:code});if(result.available)window.location.href=`game.html?room=${encodeURIComponent(code)}`}catch(error){note.textContent=error.message||'Room not found.';button.disabled=false;button.innerHTML='Join game <span>→</span>'}})}
 const peopleHome=$('#peopleHomeGrid');
 async function loadPeopleHome(){
   if(!peopleHome)return;
@@ -74,12 +111,12 @@ async function loadPeopleHome(){
       const card=document.createElement('article');
       card.className='people-home-card';
       card.dataset.userId=p.id;
-      card.innerHTML=`${avatarThumb(p.photo,p.name)}<h3>${p.name}</h3><p>Gizmo trivia player</p><button type="button" class="${isFollowing?'following':''}">${isFollowing?'Following':'Follow'}</button>`;
+      card.innerHTML=`${avatarThumb(p.photo,p.name)}<h3>${p.name}</h3><p>Quester trivia player</p><button type="button" class="${isFollowing?'following':''}">${isFollowing?'Following':'Follow'}</button>`;
       if(me){card.querySelector('button').onclick=async()=>{try{await profileApi('follow',{id:me,target:p.id});loadPeopleHome()}catch(e){toast(e.message)}}}
       else card.querySelector('button').onclick=()=>openAuth('login');
       peopleHome.append(card);
     }
-  }catch{peopleHome.innerHTML='<p>Sign in to meet Gizmo players.</p>'}
+  }catch{peopleHome.innerHTML='<p>Sign in to meet Quester players.</p>'}
 }
 if(peopleHome){loadPeopleHome();setInterval(loadPeopleHome,8000)}
 if(state.user?.id)setInterval(()=>authApi('me',{id:state.user.id}).then(d=>saveUser(d.user)).catch(()=>{}),8000)

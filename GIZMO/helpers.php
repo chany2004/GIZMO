@@ -49,6 +49,46 @@ function clean_name(string $name): string
     return substr($name ?: 'Player', 0, 24);
 }
 
+function verify_google_id_token(string $credential): array
+{
+    $clientId = trim(gizmo_env('GOOGLE_CLIENT_ID'));
+    if ($clientId === '') {
+        throw new RuntimeException('Google Sign-In is not configured yet.');
+    }
+    if ($credential === '' || !function_exists('curl_init')) {
+        throw new RuntimeException('A valid Google credential is required.');
+    }
+
+    $curl = curl_init('https://oauth2.googleapis.com/tokeninfo?id_token=' . rawurlencode($credential));
+    curl_setopt_array($curl, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 8,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ]);
+    $raw = curl_exec($curl);
+    $status = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    $error = curl_error($curl);
+    curl_close($curl);
+
+    if ($raw === false || $status !== 200) {
+        throw new RuntimeException($error ?: 'Google could not verify this sign-in.');
+    }
+    $profile = json_decode((string) $raw, true);
+    $issuer = (string) ($profile['iss'] ?? '');
+    if (!is_array($profile)
+        || !hash_equals($clientId, (string) ($profile['aud'] ?? ''))
+        || !in_array($issuer, ['accounts.google.com', 'https://accounts.google.com'], true)
+        || (int) ($profile['exp'] ?? 0) <= time()
+        || !filter_var($profile['email'] ?? '', FILTER_VALIDATE_EMAIL)
+        || !in_array($profile['email_verified'] ?? false, [true, 'true', '1', 1], true)
+        || trim((string) ($profile['sub'] ?? '')) === '') {
+        throw new RuntimeException('Google returned an invalid or expired identity token.');
+    }
+    return $profile;
+}
+
 function photo_public_url(?string $photo, $version = null): string
 {
     if (!$photo) return '';

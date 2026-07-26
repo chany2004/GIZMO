@@ -16,14 +16,14 @@ if (!$apiKey) {
     $setupHint = $groqKey === ''
         ? 'GROQ_API_KEY is missing in Vercel Environment Variables. Add it, then redeploy.'
         : 'GROQ_API_KEY was found but is invalid. Use a value starting with gsk_, with no quotes or spaces.';
-    json_reply(['reply' => "Gizmo AI is offline. {$setupHint}", 'mode' => 'offline']);
+    json_reply(['reply' => "Quester AI is offline. {$setupHint}", 'mode' => 'offline']);
 }
 
 if (!function_exists('curl_init')) {
     json_reply(['error' => 'PHP cURL extension is required for AI chat.'], 500);
 }
 
-$systemPrompt = "You are Gizmo AI, a super smart, friendly, and engaging AI study assistant and tutor for GIZMO. You help students understand complex topics, explain concepts simply, answer trivia questions, give study advice, and solve problems. Use clear formatting, bullet points, and emoji where helpful.";
+$systemPrompt = "You are Quester AI, a super smart, friendly, and engaging AI study assistant and tutor for QUESTER. You help students understand complex topics, explain concepts simply, answer trivia questions, give study advice, and solve problems. Use clear formatting, bullet points, and emoji where helpful.";
 
 // 1. Groq API (100% Free - Key starts with gsk_)
 if (str_starts_with($apiKey, 'gsk_')) {

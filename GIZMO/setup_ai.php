@@ -87,7 +87,7 @@ $masked = $configured ? ($providerType . ': ...' . substr($activeKey, -4)) : '';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>AI setup — GIZMO</title>
+<title>AI setup — QUESTER</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -115,14 +115,14 @@ $masked = $configured ? ($providerType . ': ...' . substr($activeKey, -4)) : '';
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="index.html"><span class="brand-mark">G</span>GIZMO</a>
+  <a class="brand" href="index.html"><span class="brand-mark">Q</span>QUESTER</a>
   <a class="back-link" href="study.html">&larr; Study</a>
 </header>
 <main class="setup-wrap">
   <section class="setup-card">
     <p class="eyebrow"><span></span> AI SETUP</p>
     <h1>Connect Free AI (Google Gemini / Groq / OpenAI)</h1>
-    <p>GIZMO supports <strong>100% Free AI Keys</strong> from Google Gemini! No credit card or payment required.</p>
+    <p>QUESTER supports <strong>100% Free AI Keys</strong> from Google Gemini! No credit card or payment required.</p>
 
     <?php if ($configured): ?>
       <span class="status ok">Configured: <?= htmlspecialchars($masked, ENT_QUOTES, 'UTF-8') ?></span>

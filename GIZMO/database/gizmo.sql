@@ -110,6 +110,14 @@ CREATE TABLE IF NOT EXISTS `rooms` (
   CONSTRAINT `fk_rooms_category` FOREIGN KEY (`category_id`) REFERENCES `quiz_categories` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `room_custom_quizzes` (
+  `room_id`        INT UNSIGNED NOT NULL,
+  `title`          VARCHAR(120) NOT NULL,
+  `questions_json` LONGTEXT NOT NULL,
+  PRIMARY KEY (`room_id`),
+  CONSTRAINT `fk_custom_quiz_room` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `room_players` (
   `id`              VARCHAR(32)  NOT NULL COMMENT 'Hex session id from multiplayer.php',
   `room_id`         INT UNSIGNED NOT NULL,

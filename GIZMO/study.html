@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Make a study set — GIZMO</title>
+  <title>Make a study set — QUESTER</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="study.css?v=3">
-  <link rel="stylesheet" href="chat.css">
+  <link rel="stylesheet" href="study.css?v=14">
+  <script src="auth-guard.js"></script>
 </head>
 <body class="study-page">
 
   <header class="topbar">
-    <a class="brand" href="index.html"><span class="brand-mark">G</span>GIZMO</a>
+    <a class="brand" href="index.html"><span class="brand-mark">Q</span>QUESTER</a>
     <div class="topbar-right">
       <span class="ai-status-pill" id="aiStatusPill" title="AI Status">
         <span class="pulse-dot"></span> <span id="aiStatusText">AI Ready</span>
       </span>
-      <a class="back-link" href="index.html">&larr; Home</a>
+      <a class="back-link" href="index.html"><span class="back-icon" aria-hidden="true">&larr;</span><span>Home</span></a>
     </div>
   </header>
 
@@ -34,8 +34,8 @@
       </div>
 
       <!-- TITLE INPUT -->
-      <div class="field-group">
-        <label for="setTitle" class="field-label">Set Title</label>
+      <div class="field-group" id="studyTitleField">
+        <label for="setTitle" class="field-label">Title</label>
         <div class="input-with-icon">
           <span class="input-icon">✏️</span>
           <input id="setTitle" maxlength="60" placeholder="e.g. Biology: Cell Structure & Organelles">
@@ -44,57 +44,68 @@
 
       <!-- MODE TAB SWITCHER -->
       <div class="source-tabs">
-        <button class="tab-btn active" type="button" data-source="manual">
-          <span class="tab-icon">✍️</span> Write Cards
+        <button class="tab-btn active" type="button" data-source="ai">
+          <span class="tab-icon">✦</span> AI Study
         </button>
-        <button class="tab-btn" type="button" data-source="ai">
-          <span class="tab-icon">✦</span> Generate with AI
+        <button class="tab-btn" type="button" data-source="manual">
+          <span class="tab-icon">📝</span> My Notes
         </button>
       </div>
 
-      <!-- MANUAL EDITOR -->
-      <div id="manualSource" class="source-content">
-        <div class="editor-toolbar">
-          <div class="toolbar-left">
-            <span class="toolbar-title">Flashcards</span>
-            <span class="badge" id="cardCountBadge">0 cards</span>
+      <!-- SAVED NOTES -->
+      <div id="manualSource" class="source-content hidden">
+        <div class="notes-library" id="notesLibrary">
+          <div class="notes-library-header">
+            <div><span class="notes-app-label">NOTEBOOK</span><h2>My Notes</h2></div>
+            <button class="note-save-button" id="newNote" type="button">+ New note</button>
           </div>
-          <div class="toolbar-actions">
-            <button class="btn-subtle" id="swapCardsBtn" type="button" title="Swap Question and Answer for all cards">⇄ Swap Q&amp;A</button>
-            <button class="btn-subtle" id="clearEmptyBtn" type="button" title="Clear empty rows">🗑️ Clean</button>
-            <button class="btn-accent" id="addCard" type="button">+ Add card</button>
+          <div class="notes-list" id="notesList"></div>
+          <p class="notes-empty" id="notesEmpty">No notes yet. Create your first note.</p>
+        </div>
+        <div class="notes-app hidden" id="noteEditor">
+          <div class="notes-app-bar">
+            <button class="note-back-button" id="backToNotes" type="button">&larr; My Notes</button>
+            <span class="note-save-status" id="noteSaveStatus">Not saved</span>
+          </div>
+          <input class="note-title-input" id="noteTitle" maxlength="100" placeholder="Note title">
+          <textarea id="noteText" maxlength="50000" placeholder="Start writing your note..."></textarea>
+          <div class="notes-app-footer">
+            <small id="noteMeta">0 characters</small>
+            <div>
+              <button class="note-delete-button" id="deleteNote" type="button">Delete</button>
+              <button class="note-save-button" id="saveNote" type="button">Save note</button>
+            </div>
           </div>
         </div>
-
-        <div id="cardsEditor" class="cards-editor"></div>
-
-        <div class="editor-bottom-bar">
-          <button class="btn-add-large" id="addCardBottom" type="button">+ Add another flashcard</button>
-        </div>
+        <div class="hidden" aria-hidden="true"><span id="cardCountBadge"></span><button id="swapCardsBtn" type="button"></button><button id="clearEmptyBtn" type="button"></button><button id="addCard" type="button"></button><button id="addCardBottom" type="button"></button><div id="cardsEditor"></div></div>
       </div>
 
       <!-- AI GENERATOR SOURCE -->
-      <div id="aiSource" class="source-content hidden">
+      <div id="aiSource" class="source-content">
         <div class="ai-box">
           <label for="sourceText" class="field-label">Study Material / Notes</label>
           <textarea id="sourceText" rows="7" maxlength="30000" placeholder="Paste your study notes, lecture transcript, article, or summary here..."></textarea>
 
           <label class="drop-zone" id="dropZone" for="fileInput">
-            <input id="fileInput" type="file" accept=".txt,.md,.csv,text/plain,text/markdown,text/csv" hidden>
+            <input id="fileInput" type="file" accept=".pdf,.txt,.md,.csv,application/pdf,text/plain,text/markdown,text/csv" hidden>
             <div class="upload-icon-wrap">📄</div>
-            <strong>Import a notes file</strong>
-            <small>TXT, Markdown, or CSV — up to 2 MB</small>
-            <span id="fileName" class="file-badge"></span>
+            <strong>Import your study notes</strong>
+            <small>PDF, TXT, Markdown, or CSV — up to 10 MB</small>
+            <span class="choose-file-button"><span aria-hidden="true">↑</span> Choose a file</span>
+            <span id="fileName" class="file-badge" aria-live="polite">No file selected</span>
           </label>
 
           <div class="ai-options-grid">
             <div class="option-field">
               <label for="aiCardCount" class="field-label">Cards to generate</label>
               <select id="aiCardCount">
+                <option value="auto" selected>Auto — based on material</option>
                 <option value="5">5 Cards</option>
-                <option value="10" selected>10 Cards</option>
+                <option value="10">10 Cards</option>
                 <option value="15">15 Cards</option>
                 <option value="20">20 Cards</option>
+                <option value="30">30 Cards</option>
+                <option value="40">40 Cards</option>
               </select>
             </div>
             <div class="option-field action-field">
@@ -109,7 +120,7 @@
 
       <!-- GLOBAL ACTION & ERROR -->
       <div class="builder-footer">
-        <button class="button primary-action" id="createSet">
+        <button class="button primary-action hidden" id="createSet">
           Create Study Set <span>&rarr;</span>
         </button>
         <p class="error" id="error" aria-live="polite"></p>
@@ -121,7 +132,7 @@
       <div class="learn-top">
         <button class="text-button" id="exitSet">&larr; Exit</button>
         <span id="setProgress" class="progress-pill">1 / 1</span>
-        <button class="text-button quiz-mode-link" id="modeButton">Quiz mode &rarr;</button>
+        <button class="text-button multiplayer-top-link" id="invitePlayers">Play with friends &rarr;</button>
       </div>
 
       <div class="card-progress-track">
@@ -156,6 +167,7 @@
       <p class="keyboard-help">
         <kbd>&larr;</kbd> <kbd>&rarr;</kbd> Navigate &nbsp;•&nbsp; <kbd>Space</kbd> Flip card &nbsp;•&nbsp; <kbd>K</kbd> Mark as known
       </p>
+      <button class="text-button quiz-mode-link quiz-mode-secondary" id="modeButton">Try quiz mode &rarr;</button>
     </section>
 
     <!-- QUIZ MODE SECTION -->
@@ -191,7 +203,6 @@
   </main>
 
   <script src="js/config.js"></script>
-  <script src="study.js?v=3"></script>
-  <script src="chat.js"></script>
+  <script src="study.js?v=12"></script>
 </body>
 </html>
