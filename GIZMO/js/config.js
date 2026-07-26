@@ -11,7 +11,11 @@
 
   // Detect if running on Vercel (no PHP backend)
   GIZMO.isVercel = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1') && !location.hostname.includes('192.168');
-  
+
+  // Google OAuth Web Client IDs are public browser configuration. The server
+  // still verifies every returned ID token before creating a session.
+  GIZMO.googleClientId = '248098586908-ofvgjd7l2tm6d0svfk8893obii0d02qa.apps.googleusercontent.com';
+
   GIZMO.backendAvailable = false;
   // Vercel deploys api/index.php at /api; XAMPP uses the root PHP router.
   GIZMO.apiBase = GIZMO.isVercel ? '/api' : 'api.php';

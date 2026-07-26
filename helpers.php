@@ -49,9 +49,25 @@ function clean_name(string $name): string
     return substr($name ?: 'Player', 0, 24);
 }
 
+function gizmo_google_client_id(): string
+{
+    $configured = trim(gizmo_env('GOOGLE_CLIENT_ID'), " \t\n\r\0\x0B\"'");
+    if (str_starts_with($configured, 'GOOGLE_CLIENT_ID=')) {
+        $configured = trim(substr($configured, strlen('GOOGLE_CLIENT_ID=')), " \t\n\r\0\x0B\"'");
+    }
+    if (preg_match('/^\d+-[a-z0-9_-]+\.apps\.googleusercontent\.com$/i', $configured)) {
+        return $configured;
+    }
+
+    // A Google Web Client ID is public browser configuration, not a secret.
+    // Keep this production fallback so every Vercel deployment can render the
+    // GIS button even when its project-level environment variable is missing.
+    return '248098586908-ofvgjd7l2tm6d0svfk8893obii0d02qa.apps.googleusercontent.com';
+}
+
 function verify_google_id_token(string $credential): array
 {
-    $clientId = trim(gizmo_env('GOOGLE_CLIENT_ID'));
+    $clientId = gizmo_google_client_id();
     if ($clientId === '') {
         throw new RuntimeException('Google Sign-In is not configured yet.');
     }

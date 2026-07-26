@@ -27,6 +27,13 @@ $data = read_json();
 $endpoint = $data['endpoint'] ?? '';
 $action = $data['action'] ?? '';
 
+// Public Google browser configuration never needs a database connection.
+// Return it before the hosted DB check so login can initialize independently.
+if ($endpoint === 'auth' && $action === 'googleConfig') {
+    $clientId = gizmo_google_client_id();
+    json_reply(['configured' => $clientId !== '', 'clientId' => $clientId]);
+}
+
 // AI chat does not read or write the database. Let it run even while a hosted
 // database is being configured (for example, while TiDB TLS settings are
 // still being added on Vercel).

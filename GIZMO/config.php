@@ -22,12 +22,21 @@ function gizmo_env(string $key, string $default = ''): string
                 [$name, $value] = explode('=', $line, 2);
                 $name = trim($name);
                 $value = trim($value, " \t\n\r\0\x0B\"'");
-                if ($name !== '') { $_ENV[$name] = $value; putenv($name . '=' . $value); }
+                if ($name !== ''
+                    && getenv($name) === false
+                    && !isset($_ENV[$name])
+                    && !isset($_SERVER[$name])) {
+                    $_ENV[$name] = $value;
+                    putenv($name . '=' . $value);
+                }
             }
         }
     }
     $value = getenv($key);
-    return $value !== false && $value !== '' ? $value : ($_ENV[$key] ?? $default);
+    if ($value !== false && trim((string) $value) !== '') return trim((string) $value);
+    if (isset($_ENV[$key]) && trim((string) $_ENV[$key]) !== '') return trim((string) $_ENV[$key]);
+    if (isset($_SERVER[$key]) && trim((string) $_SERVER[$key]) !== '') return trim((string) $_SERVER[$key]);
+    return $default;
 }
 
 // cPanel reads values from a root .env file; Vercel reads Project Settings variables.

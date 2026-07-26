@@ -5,7 +5,7 @@ $data = read_json();
 $action = $data['action'] ?? '';
 
 if ($action === 'googleConfig') {
-    $clientId = trim(gizmo_env('GOOGLE_CLIENT_ID'));
+    $clientId = gizmo_google_client_id();
     json_reply(['configured' => $clientId !== '', 'clientId' => $clientId]);
 }
 

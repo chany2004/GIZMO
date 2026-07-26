@@ -59,7 +59,7 @@ document.addEventListener('click',event=>{const auth=event.target.closest('[data
 $('#authForm').addEventListener('submit',async event=>{event.preventDefault();const email=$('#email').value.trim(),password=$('#password').value;if(password.length<6){$('#formNote').textContent='Please use at least 6 characters for your password.';return}try{const d=await authApi(state.mode==='login'?'login':'register',{email,password,name:email.split('@')[0]});await login(d.user)}catch(e){$('#formNote').textContent=e.message}});
 $('#guestSignIn').addEventListener('click',()=>{saveUser({id:null,name:'Guest',guest:true,offline:true});closeModal('authModal');toast('Guest mode is on. Create an account anytime to save online.')});
 async function waitForGoogleIdentity(){
-  for(let attempt=0;attempt<40;attempt++){
+  for(let attempt=0;attempt<120;attempt++){
     if(window.google?.accounts?.id)return window.google.accounts.id;
     await new Promise(resolve=>setTimeout(resolve,100));
   }
@@ -68,16 +68,24 @@ async function waitForGoogleIdentity(){
 async function setupGoogleSignIn(){
   const container=$('#googleSignIn');
   try{
-    const [identity,config]=await Promise.all([waitForGoogleIdentity(),authApi('googleConfig')]);
-    if(!config.configured||!config.clientId)throw new Error('Google Sign-In is not configured on the server.');
+    const publicClientId=(window.GIZMO?.googleClientId||'').trim();
+    const [identity,config]=await Promise.all([
+      waitForGoogleIdentity(),
+      authApi('googleConfig').catch(error=>({error}))
+    ]);
+    const clientId=(config?.clientId||publicClientId).trim();
+    if(!clientId)throw new Error(config?.error?.message||'Google Sign-In is not configured on the server.');
+    container.classList.remove('google-setup-error');
+    container.textContent='';
     identity.initialize({
-      client_id:config.clientId,
+      client_id:clientId,
       ux_mode:'popup',
       auto_select:false,
-      use_fedcm_for_prompt:true,
+      use_fedcm_for_button:true,
       callback:async response=>{
         $('#formNote').textContent='';
         try{
+          if(!response?.credential)throw new Error('Google did not return a sign-in credential. Please try again.');
           const result=await authApi('google',{credential:response.credential});
           await login(result.user);
         }catch(error){
