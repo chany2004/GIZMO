@@ -112,3 +112,28 @@
   #authModal .auth-panel{width:min(calc(100vw - 16px),380px)!important;max-height:calc(100vh - 16px)!important;padding:20px 18px 19px!important;border-radius:15px!important}
   #authModal .auth-panel h2{font-size:25px}
 }
+
+/* Stable mobile sign-in: no focus zoom, no clipped Google button */
+html{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{max-width:100%;overflow-x:hidden}
+#authModal{min-height:100vh;min-height:100dvh}
+#authModal .auth-panel{max-height:calc(100vh - 28px)!important;max-height:calc(100dvh - 28px)!important}
+#authModal button,#authModal a,#authModal input{touch-action:manipulation}
+#authModal .google-button-shell{max-width:100%;overflow:hidden}
+#authModal .google-button-shell>div{min-width:0;max-width:100%}
+#authModal .google-button-shell iframe{display:block;max-width:100%!important}
+.google-button-shell>.google-external-panel{display:grid;gap:5px;width:100%;justify-items:stretch}
+.google-external-link{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;min-height:46px;padding:7px 11px;border:1px solid #d9dce6;border-radius:10px;background:#fff;color:#232a43;text-align:left;text-decoration:none}
+.google-external-link:hover{border-color:#8aaef0;background:#f8faff}
+.google-external-g{color:#4285f4;font:700 20px Arial,sans-serif;text-align:center}
+.google-external-copy{display:flex;min-width:0;flex-direction:column;line-height:1.15}
+.google-external-copy strong{font-size:13px}
+.google-external-copy small{margin-top:2px;color:#777b90;font-size:9px}
+.google-external-arrow{color:#5b50d6;font-size:16px}
+.google-external-help{margin:0!important;color:#777b90!important;font-size:10px!important;line-height:1.35!important;text-align:center}
+@media(max-width:640px){
+  #authModal form input{font-size:16px!important}
+}
+@media(max-width:430px){
+  #authModal .auth-panel{max-height:calc(100vh - 16px)!important;max-height:calc(100dvh - 16px)!important}
+}

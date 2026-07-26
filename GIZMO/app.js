@@ -47,8 +47,36 @@ const profileApi = (action, body = {}) => {
   return safeFetch('profiles.php', {action,...body});
 };
 function toast(message){const t=$('#toast');t.textContent=message;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),3200)}function closeModal(id){if(id==='authModal'&&document.body.classList.contains('auth-required'))return;$(`#${id}`).classList.add('hidden')}
-function openAuth(mode='login'){state.mode=mode;$('#authTitle').textContent=mode==='login'?'Play with your brain on.':'Your next streak starts now.';$('#authSubtitle').textContent=mode==='login'?'Log in to save your scores and keep your streak.':'Create a free account and make every game count.';$('#authSubmit').innerHTML=`${mode==='login'?'Log in':'Create account'} <span>→</span>`;$('#switchCopy').innerHTML=mode==='login'?'New to Quester? <button type="button" data-switch-auth="signup">Create an account</button>':'Already playing? <button type="button" data-switch-auth="login">Log in</button>';$('#formNote').textContent='';authModal.classList.remove('hidden')}
-function saveUser(user){state.user=user;localStorage.setItem('gizmoUser',JSON.stringify(user));renderUser();if(document.body.classList.contains('auth-required')){let next='';try{next=sessionStorage.getItem('questerAuthReturn')||'';sessionStorage.removeItem('questerAuthReturn')}catch(e){}document.body.classList.remove('auth-required');if(next&&!/^index\.html(?:[?#]|$)/i.test(next)){location.href=next}}}
+function openAuth(mode='login'){
+  state.mode=mode;
+  $('#authTitle').textContent=mode==='login'?'Play with your brain on.':'Your next streak starts now.';
+  $('#authSubtitle').textContent=mode==='login'?'Log in to save your scores and keep your streak.':'Create a free account and make every game count.';
+  $('#authSubmit').innerHTML=`${mode==='login'?'Log in':'Create account'} <span>→</span>`;
+  $('#switchCopy').innerHTML=mode==='login'?'New to Quester? <button type="button" data-switch-auth="signup">Create an account</button>':'Already playing? <button type="button" data-switch-auth="login">Log in</button>';
+  $('#formNote').textContent='';
+  authModal.classList.remove('hidden');
+  setupGoogleSignIn();
+}
+function safeAuthReturn(value){
+  const next=(value||'').trim();
+  return /^[a-z0-9][a-z0-9_-]*\.html(?:[?#].*)?$/i.test(next)?next:'';
+}
+function getAuthReturn(){
+  let next='';
+  try{next=safeAuthReturn(sessionStorage.getItem('questerAuthReturn'))}catch(e){}
+  return next||safeAuthReturn(new URLSearchParams(location.search).get('return'));
+}
+function saveUser(user){
+  state.user=user;
+  localStorage.setItem('gizmoUser',JSON.stringify(user));
+  renderUser();
+  if(document.body.classList.contains('auth-required')){
+    const next=getAuthReturn();
+    try{sessionStorage.removeItem('questerAuthReturn')}catch(e){}
+    document.body.classList.remove('auth-required');
+    if(next&&!/^index\.html(?:[?#]|$)/i.test(next))location.href=next;
+  }
+}
 function renderUser(){const guest=$('#guestActions'),profile=$('#profileButton');if(!state.user?.id&&!state.user?.guest){guest?.classList.remove('hidden');profile?.classList.add('hidden');return}guest?.classList.add('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.guest?'G':state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=state.user.guest?'Guest mode — create an account to save online':`${state.user.name}'s player dashboard`;profile.classList.remove('hidden')}
 function avatarThumb(photo,name){return photo?`<span class="player-photo" style="background-image:url('${photo}')"></span>`:`<b>${name.charAt(0).toUpperCase()}</b>`}
 async function login(user){saveUser(user);closeModal('authModal');toast(`Welcome${user.name?`, ${user.name}`:''}! Your streak starts today. ✨`)}
@@ -65,42 +93,159 @@ async function waitForGoogleIdentity(){
   }
   throw new Error('Google Sign-In could not load. Check your internet connection and refresh.');
 }
+let googleIdentity=null;
+let googleSetupPromise=null;
+let googleRenderFrame=0;
+let googleRenderedWidth=0;
+let googleResizeTimer=0;
+function isEmbeddedBrowser(){
+  const ua=navigator.userAgent||'';
+  const knownApp=/FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|MicroMessenger/i.test(ua);
+  const androidWebView=/Android/i.test(ua)&&(/;\s*wv\)/i.test(ua)||/\bVersion\/[\d.]+\s+Chrome\//i.test(ua));
+  const iosWebView=/iPhone|iPad|iPod/i.test(ua)&&/AppleWebKit/i.test(ua)&&!/Safari/i.test(ua);
+  return knownApp||androidWebView||iosWebView;
+}
+function externalBrowserTarget(){
+  const ua=navigator.userAgent||'';
+  const url=new URL(location.href);
+  url.searchParams.set('auth','required');
+  url.searchParams.set('external','1');
+  const returnPath=getAuthReturn();
+  if(returnPath)url.searchParams.set('return',returnPath);
+  url.hash='';
+  if(/Android/i.test(ua)){
+    const scheme=url.protocol.replace(':','')||'https';
+    const fallback=encodeURIComponent(url.href);
+    return {
+      href:`intent://${url.host}${url.pathname}${url.search}#Intent;scheme=${scheme};package=com.android.chrome;S.browser_fallback_url=${fallback};end`,
+      label:'Open in Chrome',
+      newWindow:false
+    };
+  }
+  return {
+    href:url.href,
+    label:/iPhone|iPad|iPod/i.test(ua)?'Open in Safari':'Open in browser',
+    newWindow:true
+  };
+}
+function renderExternalGoogleSignIn(){
+  const container=$('#googleSignIn');
+  if(!container)return;
+  const target=externalBrowserTarget();
+  const link=document.createElement('a');
+  link.className='google-external-link';
+  link.href=target.href;
+  if(target.newWindow)link.target='_blank';
+  link.rel='noopener noreferrer external';
+
+  const logo=document.createElement('span');
+  logo.className='google-external-g';
+  logo.textContent='G';
+  const copy=document.createElement('span');
+  copy.className='google-external-copy';
+  const title=document.createElement('strong');
+  title.textContent=target.label;
+  const subtitle=document.createElement('small');
+  subtitle.textContent='Continue with Google';
+  copy.append(title,subtitle);
+  const arrow=document.createElement('span');
+  arrow.className='google-external-arrow';
+  arrow.textContent='\u2197';
+  link.append(logo,copy,arrow);
+
+  const help=document.createElement('p');
+  help.className='google-external-help';
+  help.textContent='This in-app browser blocks Google sign-in. If needed, tap the three-dot menu and choose Open in browser.';
+  container.classList.remove('google-setup-error');
+  container.classList.add('google-external-panel');
+  container.replaceChildren(link,help);
+}
+function renderGoogleButton(){
+  const container=$('#googleSignIn');
+  if(!container||!googleIdentity||authModal.classList.contains('hidden'))return;
+  const shell=container.closest('.google-button-shell');
+  const available=Math.floor(shell?.getBoundingClientRect().width||0);
+  if(available<200)return;
+  const width=Math.max(200,Math.min(400,available));
+  if(googleRenderedWidth===width&&container.querySelector('iframe'))return;
+  googleRenderedWidth=width;
+  container.classList.remove('google-setup-error','google-external-panel');
+  container.replaceChildren();
+  googleIdentity.renderButton(container,{
+    type:'standard',
+    theme:'outline',
+    size:'large',
+    text:'signin_with',
+    shape:'rectangular',
+    logo_alignment:'left',
+    width,
+    locale:'en'
+  });
+}
+function scheduleGoogleButtonRender(){
+  cancelAnimationFrame(googleRenderFrame);
+  googleRenderFrame=requestAnimationFrame(()=>{
+    googleRenderFrame=requestAnimationFrame(renderGoogleButton);
+  });
+}
 async function setupGoogleSignIn(){
   const container=$('#googleSignIn');
-  try{
-    const publicClientId=(window.GIZMO?.googleClientId||'').trim();
-    const [identity,config]=await Promise.all([
-      waitForGoogleIdentity(),
-      authApi('googleConfig').catch(error=>({error}))
-    ]);
-    const clientId=(config?.clientId||publicClientId).trim();
-    if(!clientId)throw new Error(config?.error?.message||'Google Sign-In is not configured on the server.');
-    container.classList.remove('google-setup-error');
-    container.textContent='';
-    identity.initialize({
-      client_id:clientId,
-      ux_mode:'popup',
-      auto_select:false,
-      use_fedcm_for_button:true,
-      callback:async response=>{
-        $('#formNote').textContent='';
-        try{
-          if(!response?.credential)throw new Error('Google did not return a sign-in credential. Please try again.');
-          const result=await authApi('google',{credential:response.credential});
-          await login(result.user);
-        }catch(error){
-          $('#formNote').textContent=error.message;
+  if(!container)return;
+  if(isEmbeddedBrowser()){
+    renderExternalGoogleSignIn();
+    return;
+  }
+  if(googleIdentity){
+    scheduleGoogleButtonRender();
+    return;
+  }
+  if(!googleSetupPromise){
+    googleSetupPromise=(async()=>{
+      const publicClientId=(window.GIZMO?.googleClientId||'').trim();
+      const [identity,config]=await Promise.all([
+        waitForGoogleIdentity(),
+        authApi('googleConfig').catch(error=>({error}))
+      ]);
+      const clientId=(config?.clientId||publicClientId).trim();
+      if(!clientId)throw new Error(config?.error?.message||'Google Sign-In is not configured on the server.');
+      identity.initialize({
+        client_id:clientId,
+        ux_mode:'popup',
+        auto_select:false,
+        use_fedcm_for_button:true,
+        itp_support:true,
+        callback:async response=>{
+          $('#formNote').textContent='';
+          try{
+            if(!response?.credential)throw new Error('Google did not return a sign-in credential. Please try again.');
+            const result=await authApi('google',{credential:response.credential});
+            await login(result.user);
+          }catch(error){
+            $('#formNote').textContent=error.message;
+          }
         }
-      }
-    });
-    const width=Math.max(240,Math.min(400,Math.floor(container.getBoundingClientRect().width||400)));
-    identity.renderButton(container,{type:'standard',theme:'outline',size:'medium',text:'signin_with',shape:'rectangular',logo_alignment:'left',width:width,locale:'en'});
+      });
+      googleIdentity=identity;
+    })();
+  }
+  try{
+    await googleSetupPromise;
+    scheduleGoogleButtonRender();
   }catch(error){
+    googleSetupPromise=null;
+    googleRenderedWidth=0;
+    container.classList.remove('google-external-panel');
     container.classList.add('google-setup-error');
     container.textContent=error.message;
   }
 }
-setupGoogleSignIn();
+function refreshGoogleButton(){
+  googleRenderedWidth=0;
+  clearTimeout(googleResizeTimer);
+  googleResizeTimer=setTimeout(scheduleGoogleButtonRender,120);
+}
+window.addEventListener('resize',refreshGoogleButton,{passive:true});
+window.addEventListener('orientationchange',refreshGoogleButton,{passive:true});
 function startGame(type){window.location.href=`game.html?category=${encodeURIComponent(type)}`}
 renderUser();if(!state.user?.id||new URLSearchParams(location.search).get('auth')==='required')requireLogin();hydrateUser();
 const joinTrigger=$('#openJoinRoom'),joinModal=$('#joinRoomModal'),joinForm=$('#joinRoomForm');if(joinTrigger){joinTrigger.addEventListener('click',()=>{joinModal.classList.remove('hidden');$('#joinRoomNote').textContent='';setTimeout(()=>$('#homeRoomCode').focus(),0)});$('#closeJoinRoom').addEventListener('click',()=>joinModal.classList.add('hidden'));$('#homeRoomCode').addEventListener('input',event=>{event.target.value=event.target.value.replace(/\D/g,'').slice(0,6);$('#joinRoomNote').textContent=''});joinForm.addEventListener('submit',async event=>{event.preventDefault();const code=$('#homeRoomCode').value.trim(),note=$('#joinRoomNote'),button=$('#joinRoomSubmit');if(!/^\d{6}$/.test(code)){note.textContent='Enter a valid 6-digit Room ID.';return}button.disabled=true;button.textContent='Checking room…';note.textContent='';try{const result=window.GIZMO?.multiplayerApi?await window.GIZMO.multiplayerApi('checkRoom',{roomCode:code}):await safeFetch('multiplayer.php',{action:'checkRoom',roomCode:code});if(result.available)window.location.href=`game.html?room=${encodeURIComponent(code)}`}catch(error){note.textContent=error.message||'Room not found.';button.disabled=false;button.innerHTML='Join game <span>→</span>'}})}
