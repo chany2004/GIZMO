@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="study.css?v=15">
+  <link rel="stylesheet" href="study.css?v=16">
   <script src="auth-guard.js"></script>
 </head>
 <body class="study-page">
@@ -88,9 +88,9 @@
 
           <label class="drop-zone" id="dropZone" for="fileInput">
             <input id="fileInput" type="file" accept=".pdf,.txt,.md,.csv,application/pdf,text/plain,text/markdown,text/csv" hidden>
-            <div class="upload-icon-wrap">📄</div>
-            <strong>Import your study notes</strong>
-            <small>PDF, TXT, Markdown, or CSV — up to 10 MB</small>
+            <div class="upload-icon-wrap" aria-hidden="true">📄</div>
+            <strong id="uploadTitle">Import your study notes</strong>
+            <small id="uploadHelp">PDF, TXT, Markdown, or CSV — up to 10 MB</small>
             <span class="choose-file-button"><span aria-hidden="true">↑</span> Choose a file</span>
             <span id="fileName" class="file-badge" aria-live="polite">No file selected</span>
           </label>
@@ -110,8 +110,13 @@
             </div>
             <div class="option-field action-field">
               <button class="button ai-button" id="generateCards" type="button">
-                <span>Generate Cards ✦</span>
+                <span class="ai-button-idle">Generate Cards ✦</span>
+                <span class="ai-button-busy" aria-hidden="true">
+                  <span class="study-inline-spinner" aria-hidden="true"></span>
+                  <span id="generateStatus">Analyzing notes...</span>
+                </span>
               </button>
+              <p class="study-visually-hidden" id="generationLiveStatus" role="status" aria-live="polite" aria-atomic="true"></p>
             </div>
           </div>
           <p class="ai-hint">AI will extract key concepts and draft flashcards into the editor for your review.</p>
@@ -203,6 +208,6 @@
   </main>
 
   <script src="js/config.js"></script>
-  <script src="study.js?v=12"></script>
+  <script src="study.js?v=13"></script>
 </body>
 </html>

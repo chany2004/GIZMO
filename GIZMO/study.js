@@ -1,6 +1,6 @@
 // GIZMO Study — Vercel-compatible with safe JSON parsing
 var $ = function(s){return document.querySelector(s)};
-var cards = [], cardIndex = 0, flipped = false, known = 0, quizIndex = 0, quizScore = 0, answered = false, setId = null;
+var cards = [], cardIndex = 0, flipped = false, known = 0, quizIndex = 0, quizScore = 0, answered = false, setId = null, setSavePromise = null;
 var user = JSON.parse(localStorage.getItem('gizmoUser') || 'null');
 
 function merge(o1, o2) {
@@ -179,17 +179,41 @@ async function initAiStatus() {
 initAiStatus();
 
 // File Upload Logic
-async function readPdfText(file) {
+function wait(ms) {
+  return new Promise(function(resolve) { setTimeout(resolve, ms); });
+}
+
+async function keepLoadingVisible(startedAt, minimumMs) {
+  var remaining = minimumMs - (Date.now() - startedAt);
+  if (remaining > 0) await wait(remaining);
+}
+
+async function waitForPendingSetSave(timeoutMs) {
+  if (!setSavePromise) return;
+  var timeoutId;
+  try {
+    await Promise.race([
+      setSavePromise,
+      new Promise(function(resolve) { timeoutId = setTimeout(resolve, timeoutMs); })
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function readPdfText(file, onProgress) {
   var pdfjs = await import('https://mozilla.github.io/pdf.js/build/pdf.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc = 'https://mozilla.github.io/pdf.js/build/pdf.worker.mjs';
   var bytes = new Uint8Array(await file.arrayBuffer());
   var pdf = await pdfjs.getDocument({ data: bytes }).promise;
   var pages = [];
+  if (onProgress) onProgress(0, pdf.numPages);
   for (var pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     var page = await pdf.getPage(pageNumber);
     var content = await page.getTextContent();
     var text = content.items.map(function(item) { return item.str || ''; }).join(' ').trim();
     if (text) pages.push(text);
+    if (onProgress) onProgress(pageNumber, pdf.numPages);
   }
   return pages.join('\n\n');
 }
@@ -327,55 +351,166 @@ noteText.addEventListener('keydown', function(event) {
   }
 });
 
-async function loadFile(file) {
-  if (!file) return;
-  if (file.size > 10 * 1024 * 1024) {
-    $('#error').textContent = 'Please choose a file smaller than 10 MB.';
-    return;
-  }
-  if (!/\.(pdf|txt|md|csv)$/i.test(file.name)) {
-    $('#error').textContent = 'Use a PDF, TXT, Markdown, or CSV notes file.';
-    return;
-  }
-  dropZone.classList.add('is-loading');
-  $('#fileName').textContent = 'Reading ' + file.name + '...';
-  $('#error').textContent = '';
-  try {
-    var text = /\.pdf$/i.test(file.name) ? await readPdfText(file) : await file.text();
-    if (!text.trim()) throw new Error('No readable text was found. Scanned PDFs need OCR first.');
-    var wasTrimmed = text.length > 30000;
-    $('#sourceText').value = text.slice(0, 30000);
-    $('#fileName').textContent = '✓ ' + file.name;
-    dropZone.classList.add('has-file');
-    $('#error').textContent = '';
-    if (wasTrimmed) $('#error').textContent = 'The first 30,000 characters were imported.';
-  } catch (error) {
-    dropZone.classList.remove('has-file');
-    $('#fileName').textContent = 'No file selected';
-    $('#error').textContent = error && error.message ? error.message : 'Could not read that file.';
-  } finally {
-    dropZone.classList.remove('is-loading');
+var dropZone = $('#dropZone');
+var fileInput = $('#fileInput');
+var generateButton = $('#generateCards');
+var fileReadSequence = 0;
+var isReadingFile = false;
+var generationActive = false;
+var lastImportedFileName = '';
+
+function setFileBusy(busy) {
+  isReadingFile = busy;
+  dropZone.classList.toggle('is-loading', busy);
+  dropZone.setAttribute('aria-busy', String(busy));
+  dropZone.setAttribute('aria-disabled', String(busy));
+  fileInput.disabled = busy || generationActive;
+  if (busy) {
+    generateButton.disabled = true;
+    generateButton.setAttribute('aria-disabled', 'true');
+  } else if (!generationActive) {
+    generateButton.disabled = false;
+    generateButton.removeAttribute('aria-disabled');
   }
 }
 
-$('#fileInput').addEventListener('change', function(e) { loadFile(e.target.files[0]); });
+function rejectImportedFile(message) {
+  fileInput.value = '';
+  if (lastImportedFileName && $('#sourceText').value.trim()) {
+    dropZone.classList.add('has-file');
+    $('#uploadTitle').textContent = 'Previous notes kept';
+    $('#uploadHelp').textContent = 'The new file was not imported';
+    $('#fileName').textContent = '✓ ' + lastImportedFileName;
+    $('#error').textContent = message + ' Your previous imported notes are still selected.';
+    return;
+  }
+  dropZone.classList.remove('has-file');
+  $('#uploadTitle').textContent = 'Import your study notes';
+  $('#uploadHelp').textContent = 'PDF, TXT, Markdown, or CSV — up to 10 MB';
+  $('#fileName').textContent = 'No file selected';
+  $('#error').textContent = message;
+}
 
-var dropZone = $('#dropZone');
+async function loadFile(file) {
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    rejectImportedFile('Please choose a file smaller than 10 MB.');
+    return;
+  }
+  if (!/\.(pdf|txt|md|csv)$/i.test(file.name)) {
+    rejectImportedFile('Use a PDF, TXT, Markdown, or CSV notes file.');
+    return;
+  }
+
+  var operationId = ++fileReadSequence;
+  var startedAt = Date.now();
+  var isPdf = /\.pdf$/i.test(file.name);
+  setFileBusy(true);
+  dropZone.classList.remove('has-file');
+  $('#uploadTitle').textContent = 'Reading your file...';
+  $('#uploadHelp').textContent = isPdf ? 'Extracting text from the PDF' : 'Importing your notes';
+  $('#fileName').textContent = 'Reading ' + file.name + '...';
+  $('#error').textContent = '';
+
+  try {
+    await wait(60);
+    var text = isPdf
+      ? await readPdfText(file, function(page, total) {
+          if (operationId !== fileReadSequence) return;
+          $('#uploadTitle').textContent = page
+            ? 'Reading page ' + page + ' of ' + total + '...'
+            : 'Opening your PDF...';
+        })
+      : await file.text();
+    if (operationId !== fileReadSequence) return;
+    if (!text.trim()) throw new Error('No readable text was found. Scanned PDFs need OCR first.');
+    var wasTrimmed = text.length > 30000;
+    await keepLoadingVisible(startedAt, 650);
+    if (operationId !== fileReadSequence) return;
+    $('#sourceText').value = text.slice(0, 30000);
+    $('#uploadTitle').textContent = 'Notes imported';
+    $('#uploadHelp').textContent = 'Your file is ready for flashcard generation';
+    $('#fileName').textContent = '✓ ' + file.name;
+    lastImportedFileName = file.name;
+    dropZone.classList.add('has-file');
+    $('#error').textContent = '';
+    if (wasTrimmed) $('#error').textContent = 'The first 30,000 characters were imported.';
+    await wait(260);
+  } catch (error) {
+    if (operationId !== fileReadSequence) return;
+    rejectImportedFile(error && error.message ? error.message : 'Could not read that file.');
+  } finally {
+    if (operationId === fileReadSequence) {
+      setFileBusy(false);
+      fileInput.value = '';
+    }
+  }
+}
+
+fileInput.addEventListener('change', function(e) { loadFile(e.target.files[0]); });
+
 dropZone.addEventListener('dragenter', function(e) { e.preventDefault(); dropZone.classList.add('dragging'); });
 dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('dragging'); });
 dropZone.addEventListener('dragleave', function(e) { e.preventDefault(); dropZone.classList.remove('dragging'); });
 dropZone.addEventListener('drop', function(e) { e.preventDefault(); dropZone.classList.remove('dragging'); loadFile(e.dataTransfer.files[0]); });
 
 // Generate Cards
-$('#generateCards').addEventListener('click', async function() {
+var generationTimer = null;
+function setGenerationStatus(message) {
+  $('#generateStatus').textContent = message;
+  $('#generationLiveStatus').textContent = message;
+}
+function beginGeneration() {
+  var stages = ['Analyzing notes...', 'Finding key ideas...', 'Building flashcards...', 'Almost ready...'];
+  var stage = 0;
+  generationActive = true;
+  generateButton.disabled = true;
+  generateButton.classList.add('is-loading');
+  generateButton.setAttribute('aria-busy', 'true');
+  generateButton.setAttribute('aria-disabled', 'true');
+  $('#sourceText').readOnly = true;
+  $('#aiCardCount').disabled = true;
+  fileInput.disabled = true;
+  dropZone.classList.add('is-locked');
+  dropZone.setAttribute('aria-disabled', 'true');
+  setGenerationStatus(stages[stage]);
+  generationTimer = setInterval(function() {
+    if (stage < stages.length - 1) {
+      stage++;
+      setGenerationStatus(stages[stage]);
+    }
+    if (stage === stages.length - 1) {
+      clearInterval(generationTimer);
+      generationTimer = null;
+    }
+  }, 1800);
+}
+function endGeneration() {
+  clearInterval(generationTimer);
+  generationTimer = null;
+  generationActive = false;
+  generateButton.classList.remove('is-loading');
+  generateButton.removeAttribute('aria-busy');
+  generateButton.removeAttribute('aria-disabled');
+  generateButton.disabled = isReadingFile;
+  $('#sourceText').readOnly = false;
+  $('#aiCardCount').disabled = false;
+  fileInput.disabled = isReadingFile;
+  dropZone.classList.remove('is-locked');
+  if (!isReadingFile) dropZone.setAttribute('aria-disabled', 'false');
+  $('#generateStatus').textContent = 'Analyzing notes...';
+  $('#generationLiveStatus').textContent = '';
+}
+
+generateButton.addEventListener('click', async function() {
+  if (generationActive || isReadingFile) return;
   var material = $('#sourceText').value.trim();
   if (material.length < 30) {
     $('#error').textContent = 'Please add more study material first (at least 30 characters).';
     return;
   }
-  var button = $('#generateCards');
-  button.disabled = true;
-  button.innerHTML = '<span>Generating Cards ✦</span>';
+  var startedAt = Date.now();
+  beginGeneration();
   $('#error').textContent = '';
 
   try {
@@ -388,31 +523,37 @@ $('#generateCards').addEventListener('click', async function() {
     }
     if (generated.length < 2) throw new Error('Could not make enough usable cards.');
     setCardRows(generated);
-    $('#error').textContent = '✨ ' + generated.length + ' flashcards generated! Starting your study set...';
-    $('#createSet').click();
+    clearInterval(generationTimer);
+    generationTimer = null;
+    setGenerationStatus('Opening your cards...');
+    await keepLoadingVisible(startedAt, 800);
+    await createStudySet();
   } catch (err) {
     $('#error').textContent = err.message;
   } finally {
-    button.disabled = false;
-    button.innerHTML = '<span>Generate Cards ✦</span>';
+    endGeneration();
   }
 });
 
 // Create Set
-$('#createSet').addEventListener('click', async function() {
+async function createStudySet() {
   cards = parseCards();
   if (cards.length < 2) {
     $('#error').textContent = 'Please fill out at least two valid Question & Answer cards.';
-    return;
+    return false;
   }
   var title = $('#setTitle').value.trim() || 'My Study Set';
   localStorage.setItem('gizmoStudySet', JSON.stringify({ title: title, cards: cards }));
 
   if (user && user.id) {
-    try {
-      var d = await studyApi('saveSet', { userId: user.id, title: title, cards: cards });
-      setId = d.setId;
-    } catch(e) {}
+    setSavePromise = studyApi('saveSet', { userId: user.id, title: title, cards: cards })
+      .then(function(d) {
+        setId = d.setId;
+        return d;
+      })
+      .catch(function() { return null; });
+  } else {
+    setSavePromise = null;
   }
 
   $('#setName').textContent = title.toUpperCase();
@@ -421,9 +562,17 @@ $('#createSet').addEventListener('click', async function() {
   cardIndex = 0;
   known = 0;
   renderCard();
-});
+  return true;
+}
 
-$('#exitSet').addEventListener('click', function() { location.href = 'index.html'; });
+$('#createSet').addEventListener('click', createStudySet);
+
+$('#exitSet').addEventListener('click', async function() {
+  this.disabled = true;
+  this.textContent = 'Saving...';
+  await waitForPendingSetSave(1200);
+  location.href = 'index.html';
+});
 
 // Render 3D Flashcard
 function renderCard() {
@@ -452,10 +601,13 @@ $('#previousCard').addEventListener('click', function() { move(-1); });
 $('#nextCard').addEventListener('click', function() { move(1); });
 $('#knownCard').addEventListener('click', function() { known++; move(1); });
 
-$('#invitePlayers').addEventListener('click', function() {
+$('#invitePlayers').addEventListener('click', async function() {
   if (!cards || cards.length < 2) return;
+  this.disabled = true;
+  this.textContent = 'Preparing...';
   var title = $('#setTitle').value.trim() || 'My Study Challenge';
   localStorage.setItem('gizmoMultiplayerStudy', JSON.stringify({ title: title, cards: cards }));
+  await waitForPendingSetSave(1500);
   location.href = 'game.html?study=1';
 });
 
@@ -539,6 +691,7 @@ async function finish() {
   var saved = false;
   if (user && user.id) {
     try {
+      await waitForPendingSetSave(2000);
       var d = await studyApi('saveResult', { userId: user.id, setId: setId, score: quizScore, total: cards.length, cardsKnown: known });
       localStorage.setItem('gizmoUser', JSON.stringify(d.user));
       saved = true;
