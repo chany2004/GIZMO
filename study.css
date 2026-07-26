@@ -2008,3 +2008,214 @@ kbd {
     padding: 12px 14px;
   }
 }
+
+/* Mobile study player v15: fixed viewport scale and compact phone layout. */
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body.study-page {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.study-page button,
+.study-page a,
+.study-page .flashcard-3d {
+  touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+  html,
+  body.study-page {
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
+  .study-page input,
+  .study-page textarea,
+  .study-page select {
+    font-size: 16px !important;
+  }
+
+  .study-page .topbar {
+    width: 100%;
+    height: 64px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .study-page .brand {
+    min-width: 0;
+    gap: 7px;
+    font-size: 21px;
+    letter-spacing: .5px;
+    white-space: nowrap;
+  }
+
+  .study-page .brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 18px;
+    flex: 0 0 28px;
+  }
+
+  .topbar-right {
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .ai-status-pill {
+    flex: 0 0 auto;
+    gap: 5px;
+    padding: 5px 8px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .pulse-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .back-link {
+    flex: 0 0 auto;
+    height: 36px;
+    gap: 4px;
+    padding: 0 10px;
+    border-radius: 9px;
+    font-size: 12px;
+  }
+
+  .back-icon {
+    font-size: 16px;
+  }
+
+  .study-wrap {
+    width: calc(100% - 24px);
+    max-width: 100%;
+    margin: 10px auto 28px;
+  }
+
+  .learn {
+    width: 100%;
+    padding: 18px 14px 20px;
+    border-radius: 18px;
+  }
+
+  .learn-top {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .learn-top > * {
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .learn-top .text-button {
+    font-size: 12px;
+  }
+
+  .progress-pill {
+    justify-self: center;
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .multiplayer-top-link {
+    min-height: 36px;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+  }
+
+  .card-progress-track {
+    height: 7px;
+    margin-bottom: 18px;
+  }
+
+  .eyebrow.center {
+    margin-bottom: 12px;
+  }
+
+  .flashcard-scene {
+    margin: 10px 0 20px;
+  }
+
+  .flashcard-3d,
+  .flashcard-inner,
+  .flashcard-front,
+  .flashcard-back {
+    min-height: 230px;
+  }
+
+  .flashcard-front,
+  .flashcard-back {
+    padding: 26px 16px 38px;
+    border-radius: 20px;
+  }
+
+  .card-side-tag {
+    margin-bottom: 12px;
+    font-size: 11px;
+  }
+
+  .flashcard-inner strong {
+    max-width: 100%;
+    font-size: clamp(20px, 6vw, 25px);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .flip-hint {
+    bottom: 12px;
+    font-size: 11px;
+  }
+
+  .card-controls {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 9px;
+    margin-top: 20px;
+  }
+
+  .round-control {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 17px !important;
+  }
+
+  .known-button {
+    width: 100%;
+    min-width: 0 !important;
+    padding: 12px 8px !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+  }
+
+  .quiz-mode-secondary {
+    margin-top: 8px !important;
+  }
+}
+
+@media (max-width: 350px) {
+  .study-page .brand {
+    font-size: 19px;
+  }
+
+  .learn-top {
+    grid-template-columns: 1fr auto;
+  }
+
+  .learn-top .multiplayer-top-link {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
