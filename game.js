@@ -2,6 +2,7 @@ const $=s=>document.querySelector(s);
 let category='world',roomCode='',playerId='',room=null,currentRound=0,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup',usingLocalQuestions=false,gameStarting=false;
 let categories={},questions=[],questionCache={};
 let onlineCategories=[];
+let lobbyRenderSignature='';
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
 const launchParams=new URLSearchParams(location.search);
@@ -154,6 +155,11 @@ async function loadCategories(){
     var list=d.categories?.length?d.categories:fallback;
     onlineCategories=list;
     renderCategorySelect(list);
+    if(phase==='lobby'&&room){
+      var info=catInfo();
+      $('#lobbyCategory').textContent=info.title||room.category;
+      $('#lobbyIcon').textContent=info.icon||'🏆';
+    }
   }catch(e){}
 }
 
@@ -273,6 +279,7 @@ function enterLobby(state){
   $('#beginGame').classList.toggle('hidden',!host);
   $('#waitForHost').classList.toggle('hidden',host);
   showLobbyNote('');
+  lobbyRenderSignature='';
   renderLobby(state);
   if(!room.offline){
     startPolling();
@@ -286,6 +293,9 @@ function renderLobby(state){
 
   var players=room.players;
   $('#lobbyPlayerCount').textContent=players.length+' player'+(players.length===1?'':'s')+' waiting';
+  var signature=players.map(function(p){return [p.id,p.name,p.photo||'',p.id===room.hostId].join(':')}).join('|');
+  if(signature===lobbyRenderSignature)return;
+  lobbyRenderSignature=signature;
   var list=$('#lobbyPlayerList');
   list.innerHTML='';
   players.forEach(function(p){
@@ -387,13 +397,20 @@ async function joinRoom(code){
   roomCode=(code||'').trim().toUpperCase();
   if(!roomCode)return showStartError('Room ID is missing.');
   showStartError('');
+  setRoomCreating(true,'Joining room '+roomCode);
+  $('#roomCreationTitle').textContent='Joining the lobby…';
   try{
     var d=await api('join',{name:playerName()});
     playerId=d.playerId;
     localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
+    setRoomCreating(false);
     if(d.state.room.status==='started')enterGame(d.state);
     else enterLobby(d.state);
-  }catch(e){showStartError(e.message)}
+  }catch(e){
+    setRoomCreating(false);
+    $('#roomCreationTitle').textContent='Creating your room…';
+    showStartError(e.message);
+  }
 }
 
 // Social & leaderboard
@@ -526,13 +543,18 @@ $('#nextAnswer').onclick=function(){
 $('#categorySelect').addEventListener('change',function(e){selectCategory(e.target.value)});
 
 (async function(){
-  await loadCategories();
+  var invite=launchParams.get('room');
+  var categoryTask=loadCategories();
+  if(invite){
+    joinRoom(invite);
+    await categoryTask;
+    return;
+  }
+  await categoryTask;
   if(customStudy){
     $('.setup-group')?.classList.add('hidden');
     updateCategoryUI();
     $('#startTitle').textContent=customStudy.title||'Study Challenge';
     $('.game-help').textContent='Create a room, invite your friends, and play this AI study set together.';
   }
-  var invite=launchParams.get('room');
-  if(invite)joinRoom(invite);
 })();
