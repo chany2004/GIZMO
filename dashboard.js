@@ -87,12 +87,14 @@ function resizeImage(file,maxSize=512,quality=0.85){
 async function uploadPhoto(file){
   if(!currentUserId)throw new Error('Please log in again.');
   const blob=await resizeImage(file);
-  const form=new FormData();
-  form.append('id',currentUserId);
-  form.append('photo',blob,'avatar.jpg');
-  const r=await fetch('upload_photo.php',{method:'POST',body:form});
-  const d=await r.json();
-  if(!r.ok||d.error)throw new Error(d.error||'Upload failed.');
+  const photo=await new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||''));
+    reader.onerror=()=>reject(new Error('Could not prepare this photo for upload.'));
+    reader.readAsDataURL(blob);
+  });
+  if(!photo.startsWith('data:image/'))throw new Error('Could not prepare this photo for upload.');
+  const d=await authApi('updatePhoto',{id:currentUserId,photo});
   return d.user;
 }
 

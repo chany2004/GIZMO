@@ -64,25 +64,96 @@ function getAuthReturn(){
   try{next=safeAuthReturn(sessionStorage.getItem('questerAuthReturn'))}catch(e){}
   return next||safeAuthReturn(new URLSearchParams(location.search).get('return'));
 }
-function saveUser(user){
-  state.user=user;
-  localStorage.setItem('gizmoUser',JSON.stringify(user));
+function saveUser(user,allowReturn=true){
+  const localPreferences=state.user?{
+    age:state.user.age,
+    gender:state.user.gender,
+    character:state.user.character
+  }:{};
+  state.user={...localPreferences,...user};
+  localStorage.setItem('gizmoUser',JSON.stringify(state.user));
   renderUser();
   if(document.body.classList.contains('auth-required')){
     const next=getAuthReturn();
     try{sessionStorage.removeItem('questerAuthReturn')}catch(e){}
     document.body.classList.remove('auth-required');
-    if(next&&!/^index\.html(?:[?#]|$)/i.test(next))location.href=next;
+    if(allowReturn&&next&&!/^index\.html(?:[?#]|$)/i.test(next))location.href=next;
   }
 }
-function renderUser(){const guest=$('#guestActions'),profile=$('#profileButton');if(!state.user?.id&&!state.user?.guest){guest?.classList.remove('hidden');profile?.classList.add('hidden');return}guest?.classList.add('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.guest?'G':state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=state.user.guest?'Guest mode — sign in with Google to save online':`${state.user.name}'s player dashboard`;profile.classList.remove('hidden')}
+function renderUser(){const guest=$('#guestActions'),profile=$('#profileButton');if(!state.user?.id&&!state.user?.guest){guest?.classList.remove('hidden');profile?.classList.add('hidden');return}guest?.classList.add('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=state.user.guest?`${state.user.name||'Guest'} — guest mode`:`${state.user.name}'s player dashboard`;profile.classList.remove('hidden')}
 function avatarThumb(photo,name){return photo?`<span class="player-photo" style="background-image:url('${photo}')"></span>`:`<b>${name.charAt(0).toUpperCase()}</b>`}
-async function login(user){saveUser(user);closeModal('authModal');toast(`Welcome${user.name?`, ${user.name}`:''}! Your streak starts today. ✨`)}
+let onboardingUser=null;
+let onboardingCharacter='profile';
+function showOnboarding(user){
+  onboardingUser=user;
+  onboardingCharacter=localStorage.getItem('gizmoBattleCharacter')||'profile';
+  if(!['profile','neon-bot','forest-hero'].includes(onboardingCharacter))onboardingCharacter='profile';
+  const username=$('#onboardingUsername');
+  username.value=(user?.name&&user.name!=='Guest'?user.name:'').slice(0,24);
+  $('#onboardingAge').value=user?.age||'';
+  $('#onboardingGender').value=user?.gender||'';
+  $('#onboardingProfileCharacter').textContent=(username.value||'Q').charAt(0).toUpperCase();
+  $('#onboardingNote').textContent='';
+  document.querySelectorAll('[data-onboarding-character]').forEach(choice=>choice.classList.toggle('selected',choice.dataset.onboardingCharacter===onboardingCharacter));
+  closeModal('authModal');
+  $('#onboardingModal').classList.remove('hidden');
+  setTimeout(()=>username.focus(),0);
+}
+async function login(user,isNewUser){
+  if(isNewUser){showOnboarding(user);return}
+  const character=localStorage.getItem('gizmoBattleCharacter')||'profile';
+  saveUser({...user,character},false);
+  closeModal('authModal');
+  if(location.search||location.hash)history.replaceState({},'', 'index.html');
+  toast(`Welcome back, ${user.name||'Player'}!`);
+}
 function goToProfile(event){event?.preventDefault();if(!state.user?.id){openAuth('login');toast('Log in to view your profile.');return}window.location.href='dashboard.html'}
 async function hydrateUser(){if(!state.user)return renderUser();if(state.user.guest)return renderUser();if(!state.user.id){localStorage.removeItem('gizmoUser');state.user=null;renderUser();requireLogin();return}try{const d=await authApi('me',{id:state.user.id});saveUser(d.user)}catch{localStorage.removeItem('gizmoUser');state.user=null;renderUser();requireLogin()}}
 function requireLogin(){if(state.user?.id||state.user?.guest)return;document.body.classList.add('auth-required');openAuth('login')}
 document.addEventListener('click',event=>{const auth=event.target.closest('[data-open-auth]');if(auth){event.preventDefault();openAuth(auth.dataset.openAuth)}const sw=event.target.closest('[data-switch-auth]');if(sw){event.preventDefault();openAuth(sw.dataset.switchAuth)}const close=event.target.closest('[data-close]');if(close)closeModal(close.dataset.close);const game=event.target.closest('[data-game]');if(game)startGame(game.dataset.game)});const howButton=$('#showHow');if(howButton)howButton.addEventListener('click',()=>toast('Create a room, invite friends, then climb the leaderboard.'));$('#profileButton')?.addEventListener('click',goToProfile);$('#viewProfileLink')?.addEventListener('click',goToProfile);
-$('#guestSignIn').addEventListener('click',()=>{saveUser({id:null,name:'Guest',guest:true,offline:true});closeModal('authModal');toast('Guest mode is on. Sign in with Google anytime to save online.')});
+$('#guestSignIn').addEventListener('click',()=>showOnboarding({id:null,name:'',guest:true,offline:true}));
+document.querySelectorAll('[data-onboarding-character]').forEach(choice=>choice.addEventListener('click',()=>{
+  onboardingCharacter=choice.dataset.onboardingCharacter;
+  document.querySelectorAll('[data-onboarding-character]').forEach(item=>item.classList.toggle('selected',item===choice));
+}));
+$('#onboardingUsername').addEventListener('input',event=>{
+  $('#onboardingProfileCharacter').textContent=(event.target.value.trim()||'Q').charAt(0).toUpperCase();
+  $('#onboardingNote').textContent='';
+});
+$('#onboardingForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!onboardingUser)return;
+  const username=$('#onboardingUsername').value.trim().replace(/\s+/g,' ');
+  const age=Number($('#onboardingAge').value);
+  const gender=$('#onboardingGender').value;
+  const note=$('#onboardingNote');
+  const submit=$('#onboardingSubmit');
+  if(username.length<2){note.textContent='Username must contain at least 2 characters.';return}
+  if(!Number.isInteger(age)||age<5||age>100){note.textContent='Enter a valid age from 5 to 100.';return}
+  if(!gender){note.textContent='Please select your gender.';return}
+  submit.disabled=true;
+  submit.textContent='Saving…';
+  note.textContent='';
+  try{
+    let completedUser={...onboardingUser,name:username,age,gender,character:onboardingCharacter};
+    if(onboardingUser.id&&onboardingUser.email){
+      const result=await profileApi('register',{email:onboardingUser.email,name:username,photo:onboardingUser.photo||''});
+      completedUser={...onboardingUser,...result.profile,name:username,age,gender,character:onboardingCharacter};
+    }
+    localStorage.setItem('gizmoBattleCharacter',onboardingCharacter);
+    saveUser(completedUser,false);
+    onboardingUser=null;
+    $('#onboardingModal').classList.add('hidden');
+    if(location.search||location.hash)history.replaceState({},'', 'index.html');
+    toast(`Welcome, ${username}! Your player is ready. ✨`);
+    if(peopleHome)loadPeopleHome();
+  }catch(error){
+    note.textContent=error.message||'Could not save your player. Please try again.';
+  }finally{
+    submit.disabled=false;
+    submit.innerHTML='ENTER THE GAME <span>→</span>';
+  }
+});
 async function waitForGoogleIdentity(){
   for(let attempt=0;attempt<120;attempt++){
     if(window.google?.accounts?.id)return window.google.accounts.id;
@@ -217,7 +288,7 @@ async function setupGoogleSignIn(){
           try{
             if(!response?.credential)throw new Error('Google did not return a sign-in credential. Please try again.');
             const result=await authApi('google',{credential:response.credential});
-            await login(result.user);
+            await login(result.user,result.isNewUser===true);
           }catch(error){
             $('#formNote').textContent=error.message;
           }
@@ -248,8 +319,10 @@ function startGame(type){window.location.href=`game.html?category=${encodeURICom
 renderUser();if(!state.user?.id||new URLSearchParams(location.search).get('auth')==='required')requireLogin();hydrateUser();
 const joinTrigger=$('#openJoinRoom'),joinModal=$('#joinRoomModal'),joinForm=$('#joinRoomForm');if(joinTrigger){let joinCharacter=localStorage.getItem('gizmoBattleCharacter')||'profile';const joinChoices=[...document.querySelectorAll('[data-join-character]')],joinProfile=$('#joinProfileCharacter');if(state.user?.photo){joinProfile.style.backgroundImage=`url('${state.user.photo}')`;joinProfile.textContent=''}else joinProfile.textContent=(state.user?.name||'G').charAt(0).toUpperCase();const renderJoinCharacter=()=>joinChoices.forEach(choice=>choice.classList.toggle('selected',choice.dataset.joinCharacter===joinCharacter));joinChoices.forEach(choice=>choice.addEventListener('click',()=>{joinCharacter=choice.dataset.joinCharacter;localStorage.setItem('gizmoBattleCharacter',joinCharacter);renderJoinCharacter()}));renderJoinCharacter();joinTrigger.addEventListener('click',()=>{joinModal.classList.remove('hidden');$('#joinRoomNote').textContent='';setTimeout(()=>$('#homeRoomCode').focus(),0)});$('#closeJoinRoom').addEventListener('click',()=>joinModal.classList.add('hidden'));$('#homeRoomCode').addEventListener('input',event=>{event.target.value=event.target.value.replace(/\D/g,'').slice(0,6);$('#joinRoomNote').textContent=''});joinForm.addEventListener('submit',event=>{event.preventDefault();const code=$('#homeRoomCode').value.trim(),note=$('#joinRoomNote'),button=$('#joinRoomSubmit');if(!/^\d{6}$/.test(code)){note.textContent='Enter a valid 6-digit Room ID.';return}button.disabled=true;button.textContent='Joining room…';note.textContent='';window.location.href=`game.html?room=${encodeURIComponent(code)}&character=${encodeURIComponent(joinCharacter)}`})}
 const peopleHome=$('#peopleHomeGrid');
+let peopleHomeLoading=false;
 async function loadPeopleHome(){
-  if(!peopleHome)return;
+  if(!peopleHome||peopleHomeLoading)return;
+  peopleHomeLoading=true;
   try{
     const d=await profileApi('list');
     const me=state.user?.id;
@@ -276,8 +349,10 @@ async function loadPeopleHome(){
   }catch(error){
     console.warn('Could not load community profiles:',error);
     peopleHome.innerHTML='<p>Players are temporarily unavailable. Please try again shortly.</p>';
+  }finally{
+    peopleHomeLoading=false;
   }
 }
-if(peopleHome){loadPeopleHome();setInterval(loadPeopleHome,8000)}
+if(peopleHome)loadPeopleHome();
 if(state.user?.id)setInterval(()=>authApi('me',{id:state.user.id}).then(d=>saveUser(d.user)).catch(()=>{}),8000)
 window.addEventListener('storage',e=>{if(e.key==='gizmoUser'||e.key==='gizmoPhotoVersion'){state.user=JSON.parse(localStorage.getItem('gizmoUser')||'null');renderUser();if(peopleHome)loadPeopleHome()}});

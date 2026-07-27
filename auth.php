@@ -71,6 +71,7 @@ if ($action === 'google') {
     $stmt = $db->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
     $row = $stmt->fetch();
+    $isNewUser = !$row;
 
     if ($row) {
         $db->prepare('UPDATE users SET name = ?, google_id = ? WHERE id = ?')
@@ -81,7 +82,7 @@ if ($action === 'google') {
         )->execute([$id, $name, $email, $googleId]);
     }
 
-    json_reply(['user' => fetch_user($db, $id)]);
+    json_reply(['user' => fetch_user($db, $id), 'isNewUser' => $isNewUser]);
 }
 
 if ($action === 'me') {
@@ -122,14 +123,26 @@ if ($action === 'updateStats') {
 }
 
 if ($action === 'updatePhoto') {
-    $id = $data['id'] ?? '';
-    $photo = $data['photo'] ?? '';
+    $id = trim((string) ($data['id'] ?? ''));
+    $photo = trim((string) ($data['photo'] ?? ''));
 
     if (!$id || !$photo) {
         json_reply(['error' => 'User id and photo are required.'], 400);
     }
+    if (!preg_match('#^data:image/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=\r\n]+$#', $photo)) {
+        json_reply(['error' => 'Please use a JPG, PNG, or WebP profile photo.'], 400);
+    }
+    if (strlen($photo) > 2 * 1024 * 1024) {
+        json_reply(['error' => 'The processed photo is still too large. Please choose another image.'], 400);
+    }
 
-    $db->prepare('UPDATE users SET photo = ? WHERE id = ?')->execute([$photo, $id]);
+    $exists = $db->prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
+    $exists->execute([$id]);
+    if (!$exists->fetch()) {
+        json_reply(['error' => 'Profile not found. Please log in again.'], 404);
+    }
+
+    $db->prepare('UPDATE users SET photo = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$photo, $id]);
     json_reply(['user' => fetch_user($db, $id)]);
 }
 

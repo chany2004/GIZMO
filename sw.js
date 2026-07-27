@@ -1,4 +1,4 @@
-const CACHE_NAME = "quester-static-v2";
+const CACHE_NAME = "quester-static-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
