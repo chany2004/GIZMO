@@ -118,13 +118,13 @@ function externalBrowserTarget(){
     const fallback=encodeURIComponent(url.href);
     return {
       href:`intent://${url.host}${url.pathname}${url.search}#Intent;scheme=${scheme};package=com.android.chrome;S.browser_fallback_url=${fallback};end`,
-      label:'Open in Chrome',
+      label:'Continue with Google',
       newWindow:false
     };
   }
   return {
     href:url.href,
-    label:/iPhone|iPad|iPod/i.test(ua)?'Open in Safari':'Open in browser',
+    label:'Continue with Google',
     newWindow:true
   };
 }
@@ -146,7 +146,7 @@ function renderExternalGoogleSignIn(){
   const title=document.createElement('strong');
   title.textContent=target.label;
   const subtitle=document.createElement('small');
-  subtitle.textContent='Continue with Google';
+  subtitle.textContent='Secure Google sign-in';
   copy.append(title,subtitle);
   const arrow=document.createElement('span');
   arrow.className='google-external-arrow';
@@ -155,7 +155,7 @@ function renderExternalGoogleSignIn(){
 
   const help=document.createElement('p');
   help.className='google-external-help';
-  help.textContent='This in-app browser blocks Google sign-in. If needed, tap the three-dot menu and choose Open in browser.';
+  help.textContent='Google sign-in will continue securely in your browser.';
   container.classList.remove('google-setup-error');
   container.classList.add('google-external-panel');
   container.replaceChildren(link,help);
