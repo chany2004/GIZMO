@@ -136,9 +136,9 @@ $('#onboardingForm').addEventListener('submit',async event=>{
   note.textContent='';
   try{
     let completedUser={...onboardingUser,name:username,age,gender,character:onboardingCharacter};
-    if(onboardingUser.id&&onboardingUser.email){
-      const result=await profileApi('register',{email:onboardingUser.email,name:username,photo:onboardingUser.photo||''});
-      completedUser={...onboardingUser,...result.profile,name:username,age,gender,character:onboardingCharacter};
+    if(onboardingUser.id){
+      const result=await authApi('completeOnboarding',{id:onboardingUser.id,name:username});
+      completedUser={...onboardingUser,...result.user,name:username,age,gender,character:onboardingCharacter};
     }
     localStorage.setItem('gizmoBattleCharacter',onboardingCharacter);
     saveUser(completedUser,false);
@@ -148,7 +148,7 @@ $('#onboardingForm').addEventListener('submit',async event=>{
     toast(`Welcome, ${username}! Your player is ready. ✨`);
     if(peopleHome)loadPeopleHome();
   }catch(error){
-    note.textContent=error.message||'Could not save your player. Please try again.';
+    note.textContent=error.message||'Could not finish player setup. Please try again.';
   }finally{
     submit.disabled=false;
     submit.innerHTML='ENTER THE GAME <span>→</span>';

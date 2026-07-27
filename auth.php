@@ -85,6 +85,27 @@ if ($action === 'google') {
     json_reply(['user' => fetch_user($db, $id), 'isNewUser' => $isNewUser]);
 }
 
+if ($action === 'completeOnboarding') {
+    $id = trim((string) ($data['id'] ?? ''));
+    $name = clean_name((string) ($data['name'] ?? ''));
+
+    if ($id === '' || $name === '') {
+        json_reply(['error' => 'User id and username are required.'], 400);
+    }
+
+    $update = $db->prepare('UPDATE users SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
+    $update->execute([$name, $id]);
+    if ($update->rowCount() === 0) {
+        $check = $db->prepare('SELECT id FROM users WHERE id = ? LIMIT 1');
+        $check->execute([$id]);
+        if (!$check->fetch()) {
+            json_reply(['error' => 'Player account not found. Please sign in again.'], 404);
+        }
+    }
+
+    json_reply(['user' => fetch_user($db, $id)]);
+}
+
 if ($action === 'me') {
     $id = $data['id'] ?? '';
     $user = fetch_user($db, $id);
