@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="profile.css">
   <script src="auth-guard.js"></script>
+  <script src="js/level.js?v=1"></script>
   <script src="js/config.js?v=3"></script>
 </head>
 <body class="dashboard-page">
@@ -45,7 +46,8 @@
     function showProfile(p){
       if(!p)return;
       nameEl.textContent=p.name;
-      metaEl.textContent=`${p.followers} followers · ${p.following} following`;
+      const level=window.QUESTER_LEVELS?.fromXp(p.totalScore||0)||{level:1,currentXp:0,requiredXp:500};
+      metaEl.textContent=`Level ${level.level} · ${level.currentXp.toLocaleString()} / ${level.requiredXp.toLocaleString()} XP · ${p.followers} followers · ${p.following} following`;
       if(p.photo){
         avatarEl.textContent='';
         avatarEl.style.backgroundImage=`url('${p.photo}')`;

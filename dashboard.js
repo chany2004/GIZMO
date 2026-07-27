@@ -123,6 +123,12 @@ function render(data,social){
   setAvatar(data.photo,name);
   document.querySelector('#welcomeName').textContent=`Hey, ${name}!`;
   document.querySelector('#totalScore').textContent=stats.totalScore||0;
+  const level=window.QUESTER_LEVELS?.fromXp(stats.totalScore||0);
+  if(level){
+    document.querySelector('#dashboardLevel').textContent=level.level;
+    document.querySelector('#dashboardXpProgress').style.width=`${level.percent}%`;
+    document.querySelector('#dashboardXp').textContent=`${level.currentXp.toLocaleString()} / ${level.requiredXp.toLocaleString()} XP`;
+  }
   document.querySelector('#totalGames').textContent=stats.totalGames||0;
   document.querySelector('#accuracy').textContent=stats.answers?`${Math.round(stats.correct/stats.answers*100)}%`:'0%';
   document.querySelector('#streak').textContent=stats.streak||0;

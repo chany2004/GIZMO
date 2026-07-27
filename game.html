@@ -9,7 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="trivia.css?v=3" />
-    <link rel="stylesheet" href="game.css?v=20" />
+    <link rel="stylesheet" href="game.css?v=21" />
+    <link rel="stylesheet" href="game-reward.css?v=1" />
     <link rel="stylesheet" href="start-polish.css?v=4" />
     <link rel="stylesheet" href="profile.css" />
     <link rel="stylesheet" href="lobby.css?v=2" />
@@ -137,6 +138,12 @@
         <div class="trivia-board" id="gameBoard"></div>
         <p class="answer-note" id="answerNote"></p>
         <button class="button answer-next hidden" type="button" id="nextAnswer">Next question <span>→</span></button>
+        <section class="game-exp-panel hidden" id="gameExpPanel" aria-live="polite">
+          <div class="exp-reward"><span>GAME REWARD</span><strong id="earnedXp">+0 XP</strong></div>
+          <div class="exp-level-row"><span>LEVEL</span><strong id="resultLevel">1</strong><em id="levelUpMessage">LEVEL UP!</em></div>
+          <div class="exp-result-track"><i id="resultXpProgress"></i><b id="xpSpark"></b></div>
+          <p id="resultXpText">0 / 500 XP</p>
+        </section>
         <div class="result-actions hidden" id="resultActions">
           <button class="button" type="button" id="restartGame">Play again <span>↻</span></button>
           <a class="button light-button" href="index.html">More games</a>
@@ -144,6 +151,7 @@
       </section>
     </main>
     <script src="js/config.js?v=3"></script>
-    <script src="game.js?v=29"></script>
+    <script src="js/level.js?v=1"></script>
+    <script src="game.js?v=32"></script>
   </body>
 </html>

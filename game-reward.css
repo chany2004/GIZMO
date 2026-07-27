@@ -1,0 +1,120 @@
+.game-exp-panel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 18px;
+  width: min(100%, 640px);
+  padding: 20px 22px 18px;
+  border: 2px solid #e5def8;
+  border-left: 7px solid #ffd34e;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #fffdf7 0, #fff 58%, #f2efff 100%);
+  color: #211b50;
+  box-shadow: 0 16px 35px #372a7620;
+}
+.game-exp-panel::before {
+  inset: auto -55px -70px auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: #7b68e814;
+}
+.game-exp-panel::after {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  color: #e9e3ff;
+  content: "✦";
+  font-size: 64px;
+  line-height: 1;
+  pointer-events: none;
+}
+.exp-reward {
+  z-index: 2;
+  grid-column: 1 / -1;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #ebe6f6;
+}
+.exp-reward span { color: #6f678a; font-size: 9px; }
+.exp-reward strong {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #fff1b8;
+  color: #8b6400;
+  font: 800 19px "Baloo 2", sans-serif;
+  text-shadow: none;
+  box-shadow: inset 0 0 0 1px #f2d36e;
+}
+.exp-level-row {
+  display: grid;
+  grid-column: 1 / 2;
+  grid-template-columns: auto auto 1fr;
+  align-self: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.exp-level-row > span { color: #6f678a; }
+.exp-level-row > strong {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #6d5ae2, #4533b4);
+  color: #fff;
+  font: 800 29px "Baloo 2", sans-serif;
+  box-shadow: 0 5px 0 #30228c, 0 7px 18px #4b3abd38;
+}
+.exp-level-row > em {
+  justify-self: start;
+  margin: 0;
+  color: #5d4bd4;
+  font-size: 13px;
+}
+.exp-result-track {
+  grid-column: 1 / -1;
+  height: 12px;
+  margin-top: 5px;
+  border: 0;
+  background: #e4e0ed;
+  box-shadow: inset 0 2px 5px #3d34551f;
+}
+.exp-result-track i {
+  background: linear-gradient(90deg, #53d2df 0, #6d59e6 66%, #ffc92f 100%);
+  box-shadow: none;
+}
+.exp-result-track b {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #ffd34e;
+  background: #fff;
+  box-shadow: 0 2px 8px #b58b23aa;
+}
+.game-exp-panel > p { grid-column: 1 / -1; color: #746d88; }
+.game-exp-panel.level-up { animation: rewardCardLevelUp .75s ease; }
+.game-exp-panel.level-up .exp-level-row > strong { animation: rewardBadgePop .75s ease; }
+.game-exp-panel.level-up .exp-level-row > em { animation: rankUpCopy 1.2s ease forwards; }
+
+@keyframes rewardCardLevelUp {
+  40% { border-color: #ffd34e; box-shadow: 0 0 0 6px #ffd34e20, 0 18px 45px #6b57cf35; transform: translateY(-3px); }
+}
+@keyframes rewardBadgePop {
+  45% { background: linear-gradient(145deg, #ffd84d, #f1ae23); color: #20183e; box-shadow: 0 5px 0 #a97613, 0 0 30px #ffd84d; }
+}
+@keyframes rankUpCopy {
+  0% { opacity: 0; transform: translateX(-8px) scale(.8); }
+  25%, 75% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .game-exp-panel { gap: 7px 12px; padding: 16px 15px 15px; border-left-width: 5px; }
+  .game-exp-panel::after { right: 14px; font-size: 50px; }
+  .exp-level-row > strong { width: 47px; height: 47px; font-size: 25px; }
+  .exp-reward strong { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-exp-panel, .game-exp-panel * { animation: none !important; transition: none !important; }
+  .game-exp-panel.level-up .exp-level-row > em { opacity: 1; transform: none; }
+}

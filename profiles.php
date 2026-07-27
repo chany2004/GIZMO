@@ -52,7 +52,7 @@ if ($action === 'list') {
     // optional social-follow table. Follow counts are loaded on the full
     // profile page instead of making this entire list depend on that table.
     $stmt = $db->query(
-        'SELECT u.id, u.name, u.photo
+        'SELECT u.id, u.name, u.photo, u.total_score
          FROM users u ORDER BY u.total_score DESC, u.name LIMIT 50'
     );
     $profiles = [];
@@ -62,6 +62,7 @@ if ($action === 'list') {
             'name'      => $row['name'],
             'photo'     => photo_public_url($row['photo'] ?? '', null),
             'followers' => 0,
+            'totalScore'=> (int) ($row['total_score'] ?? 0),
         ];
     }
     json_reply(['profiles' => $profiles]);
@@ -93,6 +94,7 @@ if ($action === 'get') {
         'photo'     => $user['photo'],
         'followers' => $followerCount,
         'following' => $followingCount,
+        'totalScore'=> (int) ($user['stats']['totalScore'] ?? 0),
     ]]);
 }
 

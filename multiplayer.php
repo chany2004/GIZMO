@@ -509,13 +509,16 @@ if ($state['finished']) {
     $totalQuestions = (int) ($state['room']['questionCount'] ?? 15);
     foreach ($state['room']['players'] as $p) {
         if ($p['userId'] && $p['round'] >= $totalQuestions) {
+            $catId = category_id($db, $state['room']['category']);
             $done = $db->prepare(
-                'SELECT id FROM game_sessions WHERE user_id = ? AND played_at > DATE_SUB(NOW(), INTERVAL 5 MINUTE) LIMIT 1'
+                'SELECT id FROM game_sessions
+                 WHERE user_id = ? AND category_id = ? AND score = ? AND correct = ? AND total = ?
+                   AND played_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+                 LIMIT 1'
             );
-            $done->execute([$p['userId']]);
+            $done->execute([$p['userId'], $catId, $p['score'], $p['correct'], $totalQuestions]);
             if (!$done->fetch()) {
                 sync_user_stats($db, $p['userId'], $p['score'], $p['correct'], $totalQuestions);
-                $catId = category_id($db, $state['room']['category']);
                 $db->prepare(
                     'INSERT INTO game_sessions (user_id, category_id, score, correct, total) VALUES (?, ?, ?, ?, ?)'
                 )->execute([$p['userId'], $catId, $p['score'], $p['correct'], $totalQuestions]);

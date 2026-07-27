@@ -70,7 +70,14 @@ function saveUser(user,allowReturn=true){
     gender:state.user.gender,
     character:state.user.character
   }:{};
-  state.user={...localPreferences,...user};
+  const previousScore=Number(state.user?.stats?.totalScore)||0;
+  const incomingScore=Number(user?.stats?.totalScore)||0;
+  const mergedStats=(state.user?.stats||user?.stats)?{
+    ...(state.user?.stats||{}),
+    ...(user?.stats||{}),
+    totalScore:Math.max(previousScore,incomingScore)
+  }:undefined;
+  state.user={...localPreferences,...user,...(mergedStats?{stats:mergedStats}:{})};
   localStorage.setItem('gizmoUser',JSON.stringify(state.user));
   renderUser();
   if(document.body.classList.contains('auth-required')){
@@ -80,7 +87,14 @@ function saveUser(user,allowReturn=true){
     if(allowReturn&&next&&!/^index\.html(?:[?#]|$)/i.test(next))location.href=next;
   }
 }
-function renderUser(){const guest=$('#guestActions'),profile=$('#profileButton');if(!state.user?.id&&!state.user?.guest){guest?.classList.remove('hidden');profile?.classList.add('hidden');return}guest?.classList.add('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=state.user.guest?`${state.user.name||'Guest'} — guest mode`:`${state.user.name}'s player dashboard`;profile.classList.remove('hidden')}
+function renderLevel(user){
+  const level=window.QUESTER_LEVELS?.fromXp(user?.stats?.totalScore||0);
+  if(!level)return;
+  $('#playerLevel').textContent=level.level;
+  $('#playerLevelProgress').style.width=`${level.percent}%`;
+  $('#playerXp').textContent=`${level.currentXp.toLocaleString()} / ${level.requiredXp.toLocaleString()} XP`;
+}
+function renderUser(){const guest=$('#guestActions'),status=$('#playerStatus'),profile=$('#profileButton');if(!state.user?.id&&!state.user?.guest){guest?.classList.remove('hidden');status?.classList.add('hidden');return}guest?.classList.add('hidden');status?.classList.remove('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=state.user.guest?`${state.user.name||'Guest'} — guest mode`:`${state.user.name}'s player dashboard`;profile.classList.remove('hidden');renderLevel(state.user)}
 function avatarThumb(photo,name){return photo?`<span class="player-photo" style="background-image:url('${photo}')"></span>`:`<b>${name.charAt(0).toUpperCase()}</b>`}
 let onboardingUser=null;
 let onboardingCharacter='profile';
@@ -340,7 +354,8 @@ async function loadPeopleHome(){
       card.tabIndex=0;
       card.setAttribute('role','link');
       card.setAttribute('aria-label',`View ${p.name}'s profile`);
-      card.innerHTML=`${avatarThumb(p.photo,p.name)}<h3>${p.name}</h3><p>Quester trivia player</p><button type="button" class="${isFollowing?'following':''}">${isFollowing?'Following':'Follow'}</button>`;
+      const playerLevel=window.QUESTER_LEVELS?.fromXp(p.totalScore||0)?.level||1;
+      card.innerHTML=`${avatarThumb(p.photo,p.name)}<h3>${p.name}</h3><p>Level ${playerLevel} · Quester player</p><button type="button" class="${isFollowing?'following':''}">${isFollowing?'Following':'Follow'}</button>`;
       const openPlayer=()=>{window.location.href=`player.html?id=${encodeURIComponent(p.id)}`};
       card.addEventListener('click',event=>{if(!event.target.closest('button'))openPlayer()});
       card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openPlayer()}});

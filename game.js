@@ -6,6 +6,7 @@ let attackRound=null,attackBusy=false;
 let onlineCategories=[];
 let lobbyRenderSignature='';
 let leaderboardRenderSignature='';
+let finishSequenceStarted=false;
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
 const characterAssets={'neon-bot':'assets/character-neon-bot.svg?v=2','forest-hero':'assets/character-forest-hero.svg?v=2'};
@@ -610,7 +611,68 @@ function offlineAnswerForRound(round,answer){
   return {correct:correct,correctAnswer:item.correct,state:{room:room}};
 }
 
+function renderResultXp(totalXp){
+  var level=window.QUESTER_LEVELS.fromXp(totalXp);
+  $('#resultLevel').textContent=level.level;
+  $('#resultXpProgress').style.width=level.percent+'%';
+  $('#xpSpark').style.left=level.percent+'%';
+  $('#resultXpText').textContent=level.currentXp.toLocaleString()+' / '+level.requiredXp.toLocaleString()+' XP';
+  return level;
+}
+
+async function animateGameXp(earned){
+  var panel=$('#gameExpPanel'),earnedEl=$('#earnedXp'),levelUp=$('#levelUpMessage');
+  panel.classList.remove('hidden');
+  earnedEl.textContent='+0 XP';
+
+  var oldTotal=Math.max(0,Number(user?.stats?.totalScore)||0);
+  var newTotal=oldTotal+earned;
+  if(user?.id&&!room?.offline&&!usingLocalQuestions){
+    try{
+      var latest=await authApi('me',{id:user.id});
+      newTotal=Math.max(oldTotal+earned,Number(latest.user?.stats?.totalScore)||0);
+      oldTotal=Math.max(0,newTotal-earned);
+      localStorage.setItem('gizmoUser',JSON.stringify({
+        ...user,
+        ...latest.user,
+        stats:{...(user.stats||{}),...(latest.user?.stats||{}),totalScore:newTotal}
+      }));
+    }catch(error){}
+  }else if(user){
+    localStorage.setItem('gizmoUser',JSON.stringify({...user,stats:{...(user.stats||{}),totalScore:newTotal}}));
+  }
+
+  var lastLevel=renderResultXp(oldTotal).level;
+  var duration=window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:Math.min(3200,1500+earned);
+  var started=performance.now();
+  await new Promise(function(resolve){
+    function frame(now){
+      var progress=Math.min(1,(now-started)/duration);
+      var eased=1-Math.pow(1-progress,3);
+      var shownTotal=Math.round(oldTotal+(newTotal-oldTotal)*eased);
+      var shownEarned=Math.round(earned*eased);
+      var current=renderResultXp(shownTotal);
+      earnedEl.textContent='+'+shownEarned.toLocaleString()+' XP';
+      if(current.level>lastLevel){
+        lastLevel=current.level;
+        levelUp.textContent='LEVEL '+current.level+'!';
+        panel.classList.remove('level-up');
+        void panel.offsetWidth;
+        panel.classList.add('level-up');
+      }
+      if(progress<1)requestAnimationFrame(frame);
+      else resolve();
+    }
+    requestAnimationFrame(frame);
+  });
+  earnedEl.textContent='+'+earned.toLocaleString()+' XP';
+  renderResultXp(newTotal);
+}
+
 function finish(){
+  if(finishSequenceStarted)return;
+  finishSequenceStarted=true;
+  phase='finished';
   clearInterval(poll);clearInterval(clock);poll=null;
   $('#questionCount').textContent='GAME COMPLETE';
   $('#progressBar').style.width='100%';
@@ -619,8 +681,13 @@ function finish(){
   var winner=room.players.slice().sort(function(a,b){return (b.score||0)-(a.score||0)})[0];
   $('#gameTitle').textContent=winner?.id===playerId?'You are the winner!':'Game finished!';
   $('#gameInstruction').textContent=(winner?.name||'Player')+' has the highest score: '+(winner?.score||0)+' points.';
-  $('#answerNote').textContent='Final scoreboard is shown below.';
-  $('#resultActions').classList.remove('hidden');
+  var mine=room.players.find(function(p){return p.id===playerId});
+  var earned=Math.max(0,Number(mine?.score)||0);
+  $('#answerNote').textContent='Adding your game points to your player EXP…';
+  animateGameXp(earned).catch(function(){}).finally(function(){
+    $('#answerNote').textContent='Your EXP and level have been updated.';
+    $('#resultActions').classList.remove('hidden');
+  });
 }
 
 // Polling

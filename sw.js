@@ -1,4 +1,4 @@
-const CACHE_NAME = "quester-static-v9";
+const CACHE_NAME = "quester-static-v14";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -14,6 +14,7 @@ const APP_SHELL = [
   "./app.js",
   "./auth-guard.js",
   "./js/config.js",
+  "./js/level.js",
   "./manifest.webmanifest",
   "./assets/icon-192.png",
   "./assets/icon-512.png",

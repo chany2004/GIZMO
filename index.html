@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=11" />
+    <link rel="stylesheet" href="styles.css?v=13" />
     <style>
       .flashcard-home-button{border:2px solid #7769d5;border-radius:13px;padding:13px 16px;color:#4d409f;background:#fffaf1;text-decoration:none;font:700 14px "DM Sans",sans-serif;white-space:nowrap}
       .flashcard-home-button:hover{background:#ece8ff}
@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="home-mobile.css?v=8" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="js/config.js?v=3"></script>
+    <script src="js/level.js?v=1"></script>
   </head>
   <body>
     <div class="noise"></div>
@@ -38,7 +39,14 @@
       <div class="top-actions" id="guestActions">
         <button class="button small" data-open-auth="login">Sign in</button>
       </div>
-      <button class="profile hidden" id="profileButton" type="button" aria-label="Open player dashboard"></button>
+      <div class="player-status hidden" id="playerStatus">
+        <div class="level-chip" title="Your game points are converted to EXP">
+          <span>LV.</span><strong id="playerLevel">1</strong>
+          <div class="level-progress"><i id="playerLevelProgress"></i></div>
+          <small id="playerXp">0 / 500 XP</small>
+        </div>
+        <button class="profile" id="profileButton" type="button" aria-label="Open player dashboard"></button>
+      </div>
     </header>
 
     <main>
@@ -236,7 +244,7 @@
 
     </div>
     <div class="toast hidden" id="toast"></div>
-    <script src="app.js?v=22"></script>
+    <script src="app.js?v=25"></script>
     <script src="chat.js?v=2"></script>
     <script src="pwa.js?v=1"></script>
   </body>
