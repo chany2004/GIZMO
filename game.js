@@ -460,21 +460,23 @@ function renderQuestion(){
 async function submitAnswer(answer,button){
   if(answered)return;
   answered=true;
+  answerTransitioning=true;
   var submittedRound=currentRound;
-  button.classList.add('answer-selected');
+  var item=questions[submittedRound];
+  var correctAnswer=Number(item.correct);
+  var isCorrect=answer===correctAnswer;
+  var correctButton=document.querySelector('.answer[data-answer-index="'+correctAnswer+'"]');
+  button.classList.add(isCorrect?'correct':'wrong');
+  if(correctButton&&!isCorrect)correctButton.classList.add('correct');
   document.querySelectorAll('.answer').forEach(function(b){b.disabled=true});
+  var selectedText=item.options[answer];
+  var correctText=item.options[correctAnswer];
+  $('#gameInstruction').textContent=isCorrect?'Correct answer! Great job.':'Review the correct answer before continuing.';
+  $('#answerNote').textContent=isCorrect
+    ? 'Correct — '+correctText
+    : 'Your answer: '+selectedText+' | Correct answer: '+correctText;
+  $('#nextAnswer').classList.remove('hidden');
   pendingAnswerSyncs++;
-  currentRound=submittedRound+1;
-  renderedRound=-1;
-  if(currentRound<questions.length)renderQuestion();
-  else{
-    $('#questionCount').textContent='ANSWERS COMPLETE';
-    $('#progressBar').style.width='100%';
-    $('#gameTitle').textContent='Great game!';
-    $('#gameInstruction').textContent='Your final score is syncing.';
-    $('#answerNote').textContent='';
-    $('#gameBoard').innerHTML='';
-  }
 
   answerSyncQueue=answerSyncQueue.then(async function(){
     var d;
@@ -496,9 +498,7 @@ async function submitAnswer(answer,button){
     leaderboardRenderSignature='';
     showBoard(room.players);
     return d;
-  }).catch(function(e){
-    $('#answerNote').textContent='A score update is retrying in the background.';
-  }).finally(function(){
+  }).catch(function(){}).finally(function(){
     pendingAnswerSyncs=Math.max(0,pendingAnswerSyncs-1);
     if(pendingAnswerSyncs===0&&currentRound>=questions.length)api('state').then(function(d){handleState(d.state)}).catch(function(){});
   });
@@ -553,12 +553,21 @@ $('#copyRoomCode').onclick=function(){copyText(roomCode,$('#lobbyNote'),'Room ID
 $('#copyRoomLink').onclick=function(){copyText(roomInviteUrl(),$('#lobbyNote'),'Invite link copied!')};
 $('#copyRoom').onclick=function(){copyText(roomInviteUrl(),$('#answerNote'),'Invite link copied!')};
 $('#nextAnswer').onclick=function(){
-  if(!pendingAnswerState)return;
-  var nextState=pendingAnswerState;
-  pendingAnswerState=null;
+  if(!answered)return;
   answerTransitioning=false;
   $('#nextAnswer').classList.add('hidden');
-  handleState(nextState);
+  currentRound++;
+  renderedRound=-1;
+  if(currentRound<questions.length)renderQuestion();
+  else{
+    $('#questionCount').textContent='ANSWERS COMPLETE';
+    $('#progressBar').style.width='100%';
+    $('#gameTitle').textContent='Great game!';
+    $('#gameInstruction').textContent='Your final score is syncing.';
+    $('#answerNote').textContent='';
+    $('#gameBoard').innerHTML='';
+    if(pendingAnswerSyncs===0)api('state').then(function(d){handleState(d.state)}).catch(function(){});
+  }
 };
 $('#categorySelect').addEventListener('change',function(e){selectCategory(e.target.value)});
 

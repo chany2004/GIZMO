@@ -75,19 +75,24 @@ function fetch_questions(PDO $db, string $slug): array
     $questions = [];
 
     $optStmt = $db->prepare(
-        'SELECT option_text, option_index FROM quiz_options
+        'SELECT option_text, option_index, is_correct FROM quiz_options
          WHERE question_id = ? ORDER BY option_index'
     );
 
     foreach ($stmt->fetchAll() as $row) {
         $optStmt->execute([(int) $row['id']]);
         $options = [];
+        $correct = -1;
         foreach ($optStmt->fetchAll() as $opt) {
             $options[] = $opt['option_text'];
+            if ((int) $opt['is_correct'] === 1) {
+                $correct = (int) $opt['option_index'];
+            }
         }
         $questions[] = [
             'text'    => $row['question'],
             'options' => $options,
+            'correct' => $correct,
         ];
     }
     return $questions;

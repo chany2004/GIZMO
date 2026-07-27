@@ -345,7 +345,11 @@ if ($action === 'questions') {
         json_reply(['error' => 'This room does not have custom study questions.'], 404);
     }
     $publicQuestions = array_map(static function ($question) {
-        return ['text' => $question['text'], 'options' => $question['options']];
+        return [
+            'text' => $question['text'],
+            'options' => $question['options'],
+            'correct' => (int) $question['correct'],
+        ];
     }, $customQuestions);
     json_reply(['title' => $roomRow['custom_title'], 'questions' => $publicQuestions]);
 }
