@@ -1005,6 +1005,8 @@
   .live-scoreboard ol{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 }
 @media(prefers-reduced-motion:reduce){.scoreboard-heading small i{animation:none}}
+
+.duel-lobby #lobbyNote:empty{display:none}
 .duel-shell .answer,
 .duel-shell .answer:hover,
 .duel-shell .answer:active,

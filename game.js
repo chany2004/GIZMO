@@ -330,11 +330,18 @@ async function beginGame(){
   }
   var btn=$('#beginGame');
   btn.disabled=true;
-  showLobbyNote('Starting game…');
+  showLobbyNote('');
+  showScreen('quizScreen');
+  setGameLoading(true,'Starting the game…');
   try{
     var d=await api('start');
     enterGame(d.state);
-  }catch(e){showLobbyNote(e.message);btn.disabled=false}
+  }catch(e){
+    setGameLoading(false);
+    showScreen('lobbyScreen');
+    showLobbyNote(e.message);
+    btn.disabled=false;
+  }
 }
 
 // Step 3: Live game
@@ -411,7 +418,6 @@ function handleState(state){
     return;
   }
   if(phase!=='playing'){
-    if(phase==='lobby')showLobbyNote('Game starting…');
     enterGame(state);
     return;
   }
