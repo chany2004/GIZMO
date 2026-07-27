@@ -1,6 +1,7 @@
 const $=s=>document.querySelector(s);
 let category='world',roomCode='',playerId='',room=null,currentRound=0,renderedRound=-1,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup',usingLocalQuestions=false,gameStarting=false;
 let categories={},questions=[],questionCache={};
+let answerSyncQueue=Promise.resolve(),pendingAnswerSyncs=0;
 let onlineCategories=[];
 let lobbyRenderSignature='';
 let leaderboardRenderSignature='';
@@ -369,7 +370,8 @@ async function renderGame(state){
   await ensureQuestions(room.category,room.customQuiz);
 
   var mine=room.players.find(function(p){return p.id===playerId})||{score:0,streak:0,round:0};
-  currentRound=mine.round||0;
+  var serverRound=mine.round||0;
+  currentRound=pendingAnswerSyncs?Math.max(currentRound,serverRound):serverRound;
   $('#score').textContent=mine.score;
   $('#playerCount').textContent=room.players.length+' player'+(room.players.length===1?'':'s');
   $('#streakBadge').textContent='🔥 '+(mine.streak||0)+' streak';
@@ -458,45 +460,55 @@ function renderQuestion(){
 async function submitAnswer(answer,button){
   if(answered)return;
   answered=true;
-  // Pause live polling immediately so it cannot redraw the board mid-answer.
-  answerTransitioning=true;
-  button.classList.add('answer-pending');
-  $('#answerNote').textContent='Submitting your answer…';
+  var submittedRound=currentRound;
+  button.classList.add('answer-selected');
   document.querySelectorAll('.answer').forEach(function(b){b.disabled=true});
-  try{
-    // If the hosted question catalog timed out, continue with the matching
-    // local practice round instead of sending mismatched answers to the API.
-    var d=(room?.offline||usingLocalQuestions)
-      ?offlineAnswer(answer)
-      :await api('answer',{round:currentRound,answer:answer});
-    var correctButton=document.querySelector('.answer[data-answer-index="'+d.correctAnswer+'"]');
-    button.classList.remove('answer-pending');
-    button.classList.add(d.correct?'correct':'wrong');
-    if(correctButton&&!d.correct)correctButton.classList.add('correct');
-    $('#answerNote').textContent=d.correct?'Correct! Nice!':'Wrong answer — try the next one!';
-    var selectedText=questions[currentRound].options[answer];
-    var correctText=questions[currentRound].options[d.correctAnswer];
-    $('#gameInstruction').textContent=d.correct?'Correct answer! Great job.':'Review the correct answer before continuing.';
-    $('#answerNote').textContent=d.correct
-      ? 'Correct - '+correctText
-      : 'Your answer: '+selectedText+' | Correct answer: '+correctText;
-    pendingAnswerState=d.state;
-    $('#nextAnswer').classList.remove('hidden');
-  }catch(e){
-    button.classList.remove('answer-pending');
-    $('#answerNote').textContent=e.message;
-    answered=false;
-    answerTransitioning=false;
-    pendingAnswerState=null;
-    document.querySelectorAll('.answer').forEach(function(b){b.disabled=false});
+  pendingAnswerSyncs++;
+  currentRound=submittedRound+1;
+  renderedRound=-1;
+  if(currentRound<questions.length)renderQuestion();
+  else{
+    $('#questionCount').textContent='ANSWERS COMPLETE';
+    $('#progressBar').style.width='100%';
+    $('#gameTitle').textContent='Great game!';
+    $('#gameInstruction').textContent='Your final score is syncing.';
+    $('#answerNote').textContent='';
+    $('#gameBoard').innerHTML='';
   }
+
+  answerSyncQueue=answerSyncQueue.then(async function(){
+    var d;
+    if(room?.offline||usingLocalQuestions)d=offlineAnswerForRound(submittedRound,answer);
+    else{
+      var lastError;
+      for(var attempt=0;attempt<3;attempt++){
+        try{d=await api('answer',{round:submittedRound,answer:answer});break}
+        catch(error){lastError=error;if(attempt<2)await pause(500*(attempt+1))}
+      }
+      if(!d)throw lastError;
+    }
+    room=d.state.room;
+    var mine=room.players.find(function(p){return p.id===playerId});
+    if(mine){
+      $('#score').textContent=mine.score;
+      $('#streakBadge').textContent='🔥 '+(mine.streak||0)+' streak';
+    }
+    leaderboardRenderSignature='';
+    showBoard(room.players);
+    return d;
+  }).catch(function(e){
+    $('#answerNote').textContent='A score update is retrying in the background.';
+  }).finally(function(){
+    pendingAnswerSyncs=Math.max(0,pendingAnswerSyncs-1);
+    if(pendingAnswerSyncs===0&&currentRound>=questions.length)api('state').then(function(d){handleState(d.state)}).catch(function(){});
+  });
 }
 
-function offlineAnswer(answer){
-  var item=questions[currentRound],correct=item.correct===answer;
+function offlineAnswerForRound(round,answer){
+  var item=questions[round],correct=item.correct===answer;
   var player=room.players.find(function(p){return p.id===playerId})||room.players[0];
   if(correct){player.streak=(player.streak||0)+1;player.correct=(player.correct||0)+1;player.score+=(100+((player.streak-1)*25))}else player.streak=0;
-  player.round=currentRound+1;
+  player.round=round+1;
   return {correct:correct,correctAnswer:item.correct,state:{room:room}};
 }
 

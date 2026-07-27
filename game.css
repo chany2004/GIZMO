@@ -782,7 +782,7 @@
 }
 
 /* Keep the answer board completely still while playing. */
-.duel-shell .answer.answer-pending{
+.duel-shell .answer.answer-selected{
   border-color:#7567df!important;
   background:#f0edff!important;
   box-shadow:0 0 0 3px #7567df20!important;
