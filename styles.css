@@ -137,3 +137,97 @@ body{max-width:100%;overflow-x:hidden}
 @media(max-width:430px){
   #authModal .auth-panel{max-height:calc(100vh - 16px)!important;max-height:calc(100dvh - 16px)!important}
 }
+
+/* Welcoming Google / guest sign-in card */
+#authModal{
+  padding:24px!important;
+  background:
+    radial-gradient(circle at 18% 18%,#7867e555 0 100px,transparent 220px),
+    radial-gradient(circle at 84% 82%,#55cde244 0 90px,transparent 210px),
+    #111936e8;
+  backdrop-filter:blur(10px);
+}
+#authModal .auth-panel{
+  width:min(calc(100vw - 32px),480px)!important;
+  padding:38px 44px 34px!important;
+  border:1px solid #ffffff!important;
+  border-radius:28px!important;
+  background:linear-gradient(160deg,#fff 0%,#fffefd 62%,#f7f4ff 100%)!important;
+  box-shadow:0 30px 90px #05091a75,0 0 0 1px #7969df20!important;
+  overflow:hidden;
+}
+#authModal .auth-panel:before{
+  height:6px!important;
+  background:linear-gradient(90deg,#6e5ce1 0 32%,#57cfe2 32% 58%,#ffd451 58% 78%,#fa6a84 78%)!important;
+}
+#authModal .auth-panel:after{
+  display:block!important;
+  z-index:0;
+  top:-72px;
+  right:-68px;
+  width:190px;
+  height:190px;
+  border-radius:50%;
+  background:radial-gradient(circle,#eee9ff 0 48%,#f8f5ff 49% 65%,transparent 66%);
+  content:"";
+}
+#authModal .mini-brand{margin-bottom:13px}
+#authModal .mini-brand .brand-mark{
+  width:48px;
+  height:48px;
+  border-radius:15px;
+  font-size:30px;
+  box-shadow:0 8px 20px #12193635;
+}
+#authModal .eyebrow{margin-bottom:8px;font-size:9px;letter-spacing:2px}
+#authModal .auth-panel h2{font-size:34px;line-height:1.04;letter-spacing:-.7px}
+#authModal .auth-subtitle{max-width:340px;margin:9px auto 18px;font-size:13px;line-height:1.5}
+#authModal .auth-perks{
+  display:flex;
+  justify-content:center;
+  gap:7px;
+  margin:0 0 18px;
+}
+#authModal .auth-perks span{padding:6px 11px;font-size:9px}
+#authModal .google-button-shell{
+  min-height:46px;
+  padding:3px;
+  border:1px solid #d8ddec;
+  border-radius:13px;
+  background:#fff;
+  box-shadow:0 5px 16px #1720440d;
+}
+#authModal .guest-button{
+  min-height:46px;
+  margin-top:12px;
+  padding:11px;
+  border-color:#d8d2ed;
+  border-radius:12px;
+  background:#f7f5ff;
+  color:#5046a5;
+}
+#authModal .guest-button:hover{border-color:#a59ae0;background:#f0edff}
+#authModal .guest-note{margin-top:7px;font-size:10px}
+#authModal .form-note{margin-top:9px;min-height:12px}
+.google-external-link{
+  grid-template-columns:30px 1fr auto;
+  min-height:46px;
+  border:0;
+  border-radius:10px;
+}
+.google-external-g{display:grid;width:20px;height:20px;place-items:center}
+.google-external-g svg{display:block;width:20px;height:20px}
+.google-external-copy strong{font-size:14px}
+.google-external-copy small{font-size:10px}
+@media(max-width:520px){
+  #authModal{padding:10px!important}
+  #authModal .auth-panel{
+    width:min(calc(100vw - 20px),420px)!important;
+    padding:29px 22px 26px!important;
+    border-radius:22px!important;
+  }
+  #authModal .mini-brand .brand-mark{width:44px;height:44px;font-size:27px}
+  #authModal .auth-panel h2{font-size:30px}
+  #authModal .auth-subtitle{font-size:12px}
+  #authModal .auth-perks{margin-bottom:15px}
+}
