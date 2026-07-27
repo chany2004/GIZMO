@@ -414,6 +414,68 @@ if ($action === 'answer') {
 $roomRow = load_room($db, $code);
 $state = room_state($db, $roomRow);
 
+if ($action === 'attack') {
+    $round = (int) ($data['round'] ?? -1);
+    $targetId = trim((string) ($data['targetPlayerId'] ?? ''));
+    if ($round < 0 || $targetId === '' || $targetId === $playerId) {
+        json_reply(['error' => 'Choose a valid opponent to attack.'], 400);
+    }
+
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS room_attacks (
+            room_id BIGINT UNSIGNED NOT NULL,
+            attacker_id VARCHAR(64) NOT NULL,
+            target_id VARCHAR(64) NOT NULL,
+            round_number INT NOT NULL,
+            damage INT NOT NULL DEFAULT 50,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (attacker_id, round_number),
+            KEY idx_room_attacks_room (room_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+
+    $proof = $db->prepare(
+        'SELECT is_correct FROM room_answers
+         WHERE room_player_id = ? AND round_number = ? LIMIT 1'
+    );
+    $proof->execute([$playerId, $round]);
+    if ((int) $proof->fetchColumn() !== 1) {
+        json_reply(['error' => 'A correct answer is required before attacking.'], 403);
+    }
+
+    $target = $db->prepare('SELECT id FROM room_players WHERE id = ? AND room_id = ? LIMIT 1');
+    $target->execute([$targetId, $roomId]);
+    if (!$target->fetch()) {
+        json_reply(['error' => 'That opponent is no longer in this room.'], 404);
+    }
+
+    try {
+        $db->beginTransaction();
+        $db->prepare(
+            'INSERT INTO room_attacks (room_id, attacker_id, target_id, round_number, damage)
+             VALUES (?, ?, ?, ?, 50)'
+        )->execute([$roomId, $playerId, $targetId, $round]);
+        $db->prepare('UPDATE room_players SET score = GREATEST(0, score - 50) WHERE id = ? AND room_id = ?')
+            ->execute([$targetId, $roomId]);
+        $db->commit();
+    } catch (PDOException $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        if ((string) $e->getCode() === '23000') {
+            json_reply(['error' => 'You already used this attack.'], 409);
+        }
+        throw $e;
+    }
+
+    $roomRow = load_room($db, $code);
+    json_reply([
+        'damage' => 50,
+        'targetPlayerId' => $targetId,
+        'state' => room_state($db, $roomRow),
+    ]);
+}
+
 if ($state['finished']) {
     $totalQuestions = (int) ($state['room']['questionCount'] ?? 15);
     foreach ($state['room']['players'] as $p) {

@@ -2,6 +2,7 @@ const $=s=>document.querySelector(s);
 let category='world',roomCode='',playerId='',room=null,currentRound=0,renderedRound=-1,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup',usingLocalQuestions=false,gameStarting=false;
 let categories={},questions=[],questionCache={};
 let answerSyncQueue=Promise.resolve(),pendingAnswerSyncs=0;
+let attackRound=null,attackBusy=false;
 let onlineCategories=[];
 let lobbyRenderSignature='';
 let leaderboardRenderSignature='';
@@ -382,7 +383,22 @@ async function renderGame(state){
 }
 
 function handleState(state){
-  if(phase==='playing'&&answerTransitioning)return;
+  if(phase==='playing'&&answerTransitioning){
+    var optimisticPlayer=room?.players?.find(function(p){return p.id===playerId});
+    room=state.room;
+    var reviewingPlayer=room.players.find(function(p){return p.id===playerId});
+    if(reviewingPlayer){
+      if(pendingAnswerSyncs&&optimisticPlayer){
+        reviewingPlayer.score=Math.max(reviewingPlayer.score||0,optimisticPlayer.score||0);
+        reviewingPlayer.streak=Math.max(reviewingPlayer.streak||0,optimisticPlayer.streak||0);
+      }
+      $('#score').textContent=reviewingPlayer.score;
+      $('#streakBadge').textContent='🔥 '+(reviewingPlayer.streak||0)+' streak';
+    }
+    $('#playerCount').textContent=room.players.length+' player'+(room.players.length===1?'':'s');
+    showBoard(room.players);
+    return;
+  }
   var status=state.room.status;
   if(status==='lobby'){
     if(phase!=='lobby')enterLobby(state);
@@ -424,7 +440,65 @@ async function loadFollowing(){if(!user?.id)return;try{var d=await authApi('soci
 loadFollowing();
 function rememberKnown(p){if(p.id===playerId||!user?.id)return;var key=p.userId||p.name;if(knownSaved.has(key))return;knownSaved.add(key);authApi('addKnown',{userId:user.id,knownUserId:p.userId||null,knownName:p.userId?null:p.name}).catch(function(){})}
 async function toggleFollow(player){if(!user?.id||!player.userId){$('#answerNote').textContent='Log in to follow players.';return}try{var d=await profileApi('follow',{id:user.id,target:player.userId});d.following?followingIds.add(player.userId):followingIds.delete(player.userId);showBoard(room.players)}catch(e){$('#answerNote').textContent=e.message}}
-function showBoard(players){var signature=players.map(function(p){return[p.id,p.name,p.photo||'',p.score||0,p.streak||0,followingIds.has(p.userId)].join(':')}).join('|');if(signature===leaderboardRenderSignature)return;leaderboardRenderSignature=signature;var list=$('#leaderboardList');list.innerHTML='';players.forEach(function(p){rememberKnown(p);var li=document.createElement('li');var av=document.createElement('span');av.className='player-avatar';if(p.photo){av.style.backgroundImage="url('"+p.photo+"')";av.textContent=''}else{av.textContent=p.name.charAt(0).toUpperCase()}var name=document.createElement('strong'),points=document.createElement('span');name.textContent=p.name+(p.id===playerId?' (You)':'');points.textContent=p.score+' pts';li.append(av,name,points);if(p.id!==playerId&&p.userId&&user?.id){var follow=document.createElement('button');follow.type='button';follow.className='follow-player';follow.textContent=followingIds.has(p.userId)?'Following':'Follow';follow.onclick=function(){toggleFollow(p)};li.append(follow)}list.append(li)});$('#leaderboard').classList.remove('hidden')}
+function showBoard(players){
+  var signature=players.map(function(p){return[p.id,p.name,p.photo||'',p.score||0,p.streak||0,followingIds.has(p.userId)].join(':')}).join('|')+'|attack:'+attackRound;
+  if(signature===leaderboardRenderSignature)return;
+  leaderboardRenderSignature=signature;
+  var list=$('#leaderboardList');
+  list.innerHTML='';
+  players.forEach(function(p){
+    rememberKnown(p);
+    var li=document.createElement('li');
+    var av=document.createElement('span');
+    av.className='player-avatar';
+    if(p.photo){av.style.backgroundImage="url('"+p.photo+"')";av.textContent=''}else{av.textContent=p.name.charAt(0).toUpperCase()}
+    var name=document.createElement('strong'),points=document.createElement('span');
+    name.textContent=p.name+(p.id===playerId?' (You)':'');
+    points.textContent=p.score+' pts';
+    li.append(av,name,points);
+    if(p.id!==playerId&&attackRound!==null){
+      var attack=document.createElement('button');
+      attack.type='button';
+      attack.className='attack-player';
+      attack.textContent='⚔ Attack −50';
+      attack.disabled=attackBusy;
+      attack.onclick=function(){attackPlayer(p)};
+      li.append(attack);
+    }else if(p.id!==playerId&&p.userId&&user?.id){
+      var follow=document.createElement('button');
+      follow.type='button';
+      follow.className='follow-player';
+      follow.textContent=followingIds.has(p.userId)?'Following':'Follow';
+      follow.onclick=function(){toggleFollow(p)};
+      li.append(follow);
+    }
+    list.append(li);
+  });
+  $('#leaderboard').classList.remove('hidden');
+}
+
+async function attackPlayer(target){
+  if(attackBusy||attackRound===null)return;
+  attackBusy=true;
+  leaderboardRenderSignature='';
+  showBoard(room.players);
+  var round=attackRound;
+  try{
+    await answerSyncQueue;
+    var d=await api('attack',{round:round,targetPlayerId:target.id});
+    attackRound=null;
+    room=d.state.room;
+    $('#answerNote').textContent='⚔ Direct hit! '+target.name+' lost '+d.damage+' points.';
+    leaderboardRenderSignature='';
+    showBoard(room.players);
+  }catch(e){
+    $('#answerNote').textContent=e.message;
+  }finally{
+    attackBusy=false;
+    leaderboardRenderSignature='';
+    showBoard(room.players);
+  }
+}
 
 // Questions & answers
 function renderQuestion(){
@@ -476,6 +550,18 @@ async function submitAnswer(answer,button){
     ? 'Correct — '+correctText
     : 'Your answer: '+selectedText+' | Correct answer: '+correctText;
   $('#nextAnswer').classList.remove('hidden');
+  attackRound=isCorrect?submittedRound:null;
+  if(isCorrect&&!room?.offline&&!usingLocalQuestions){
+    var optimisticPlayer=room.players.find(function(p){return p.id===playerId});
+    if(optimisticPlayer){
+      optimisticPlayer.streak=(optimisticPlayer.streak||0)+1;
+      optimisticPlayer.score=(optimisticPlayer.score||0)+100+((optimisticPlayer.streak-1)*25);
+      $('#score').textContent=optimisticPlayer.score;
+      $('#streakBadge').textContent='🔥 '+optimisticPlayer.streak+' streak';
+    }
+  }
+  leaderboardRenderSignature='';
+  showBoard(room.players);
   pendingAnswerSyncs++;
 
   answerSyncQueue=answerSyncQueue.then(async function(){
@@ -540,7 +626,7 @@ function startClock(){
 
 function startPolling(){
   clearInterval(poll);
-  var ms=phase==='lobby'?1000:2500;
+  var ms=1000;
   poll=setInterval(function(){api('state').then(function(d){handleState(d.state)}).catch(function(){})},ms);
   startClock();
 }

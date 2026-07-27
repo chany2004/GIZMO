@@ -787,6 +787,19 @@
   background:#f0edff!important;
   box-shadow:0 0 0 3px #7567df20!important;
 }
+.attack-player{
+  flex:0 0 auto!important;
+  padding:7px 10px!important;
+  border:1px solid #f0a3ad!important;
+  border-radius:9px!important;
+  background:#fff0f2!important;
+  color:#be2944!important;
+  font:800 10px "DM Sans",sans-serif!important;
+  box-shadow:none!important;
+  cursor:pointer;
+}
+.attack-player:hover:not(:disabled){background:#ffe2e7!important;transform:none!important}
+.attack-player:disabled{opacity:.55;cursor:wait}
 .duel-shell .answer,
 .duel-shell .answer:hover,
 .duel-shell .answer:active,
