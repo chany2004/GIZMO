@@ -1,8 +1,9 @@
 const $=s=>document.querySelector(s);
-let category='world',roomCode='',playerId='',room=null,currentRound=0,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup',usingLocalQuestions=false,gameStarting=false;
+let category='world',roomCode='',playerId='',room=null,currentRound=0,renderedRound=-1,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup',usingLocalQuestions=false,gameStarting=false;
 let categories={},questions=[],questionCache={};
 let onlineCategories=[];
 let lobbyRenderSignature='';
+let leaderboardRenderSignature='';
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
 const launchParams=new URLSearchParams(location.search);
@@ -347,6 +348,8 @@ async function enterGame(state){
   $('#roomLabel').textContent='ROOM '+roomCode;
   $('#resultActions').classList.add('hidden');
   $('#beginGame').disabled=false;
+  renderedRound=-1;
+  leaderboardRenderSignature='';
   setGameLoading(true,'Loading your challenge…');
   try{
     // Keep the start screen visible briefly so the transition feels intentional,
@@ -373,7 +376,7 @@ async function renderGame(state){
   showBoard(room.players);
 
   if(room.status==='finished'||currentRound>=questions.length){finish();return}
-  renderQuestion();
+  if(renderedRound!==currentRound)renderQuestion();
 }
 
 function handleState(state){
@@ -419,12 +422,13 @@ async function loadFollowing(){if(!user?.id)return;try{var d=await authApi('soci
 loadFollowing();
 function rememberKnown(p){if(p.id===playerId||!user?.id)return;var key=p.userId||p.name;if(knownSaved.has(key))return;knownSaved.add(key);authApi('addKnown',{userId:user.id,knownUserId:p.userId||null,knownName:p.userId?null:p.name}).catch(function(){})}
 async function toggleFollow(player){if(!user?.id||!player.userId){$('#answerNote').textContent='Log in to follow players.';return}try{var d=await profileApi('follow',{id:user.id,target:player.userId});d.following?followingIds.add(player.userId):followingIds.delete(player.userId);showBoard(room.players)}catch(e){$('#answerNote').textContent=e.message}}
-function showBoard(players){var list=$('#leaderboardList');list.innerHTML='';players.forEach(function(p){rememberKnown(p);var li=document.createElement('li');var av=document.createElement('span');av.className='player-avatar';if(p.photo){av.style.backgroundImage="url('"+p.photo+"')";av.textContent=''}else{av.textContent=p.name.charAt(0).toUpperCase()}var name=document.createElement('strong'),points=document.createElement('span');name.textContent=p.name+(p.id===playerId?' (You)':'');points.textContent=p.score+' pts';li.append(av,name,points);if(p.id!==playerId&&p.userId&&user?.id){var follow=document.createElement('button');follow.type='button';follow.className='follow-player';follow.textContent=followingIds.has(p.userId)?'Following':'Follow';follow.onclick=function(){toggleFollow(p)};li.append(follow)}list.append(li)});$('#leaderboard').classList.remove('hidden')}
+function showBoard(players){var signature=players.map(function(p){return[p.id,p.name,p.photo||'',p.score||0,p.streak||0,followingIds.has(p.userId)].join(':')}).join('|');if(signature===leaderboardRenderSignature)return;leaderboardRenderSignature=signature;var list=$('#leaderboardList');list.innerHTML='';players.forEach(function(p){rememberKnown(p);var li=document.createElement('li');var av=document.createElement('span');av.className='player-avatar';if(p.photo){av.style.backgroundImage="url('"+p.photo+"')";av.textContent=''}else{av.textContent=p.name.charAt(0).toUpperCase()}var name=document.createElement('strong'),points=document.createElement('span');name.textContent=p.name+(p.id===playerId?' (You)':'');points.textContent=p.score+' pts';li.append(av,name,points);if(p.id!==playerId&&p.userId&&user?.id){var follow=document.createElement('button');follow.type='button';follow.className='follow-player';follow.textContent=followingIds.has(p.userId)?'Following':'Follow';follow.onclick=function(){toggleFollow(p)};li.append(follow)}list.append(li)});$('#leaderboard').classList.remove('hidden')}
 
 // Questions & answers
 function renderQuestion(){
   var item=questions[currentRound];
   if(!item)return;
+  renderedRound=currentRound;
   answered=false;
   answerTransitioning=false;
   questionStartedAt=Date.now();
@@ -456,6 +460,8 @@ async function submitAnswer(answer,button){
   answered=true;
   // Pause live polling immediately so it cannot redraw the board mid-answer.
   answerTransitioning=true;
+  button.classList.add('answer-pending');
+  $('#answerNote').textContent='Submitting your answer…';
   document.querySelectorAll('.answer').forEach(function(b){b.disabled=true});
   try{
     // If the hosted question catalog timed out, continue with the matching
@@ -464,6 +470,7 @@ async function submitAnswer(answer,button){
       ?offlineAnswer(answer)
       :await api('answer',{round:currentRound,answer:answer});
     var correctButton=document.querySelector('.answer[data-answer-index="'+d.correctAnswer+'"]');
+    button.classList.remove('answer-pending');
     button.classList.add(d.correct?'correct':'wrong');
     if(correctButton&&!d.correct)correctButton.classList.add('correct');
     $('#answerNote').textContent=d.correct?'Correct! Nice!':'Wrong answer — try the next one!';
@@ -476,6 +483,7 @@ async function submitAnswer(answer,button){
     pendingAnswerState=d.state;
     $('#nextAnswer').classList.remove('hidden');
   }catch(e){
+    button.classList.remove('answer-pending');
     $('#answerNote').textContent=e.message;
     answered=false;
     answerTransitioning=false;
