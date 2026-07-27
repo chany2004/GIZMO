@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="profile.css">
   <script src="auth-guard.js"></script>
+  <script src="js/config.js?v=3"></script>
 </head>
 <body class="dashboard-page">
   <header class="topbar">
@@ -34,6 +35,7 @@
     const followBtn=document.querySelector('#follow');
 
     async function profileApi(action,body={}){
+      if(window.GIZMO?.profileApi)return window.GIZMO.profileApi(action,body);
       const r=await fetch('profiles.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})});
       const d=await r.json();
       if(!r.ok||d.error)throw new Error(d.error||'Request failed');

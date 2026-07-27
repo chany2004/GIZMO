@@ -13,23 +13,34 @@ function New-QuesterIcon {
     $graphics.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
 
     $bounds = [System.Drawing.Rectangle]::new(0, 0, $Size, $Size)
-    $background = [System.Drawing.Drawing2D.LinearGradientBrush]::new(
-        $bounds,
-        [System.Drawing.ColorTranslator]::FromHtml("#111833"),
-        [System.Drawing.ColorTranslator]::FromHtml("#6757D9"),
-        45
+    $background = [System.Drawing.SolidBrush]::new(
+        [System.Drawing.ColorTranslator]::FromHtml("#FFFAF1")
     )
     $graphics.FillRectangle($background, $bounds)
 
-    $padding = if ($Maskable) { [int]($Size * 0.20) } else { [int]($Size * 0.12) }
-    $circleSize = $Size - (2 * $padding)
-    $circleBounds = [System.Drawing.RectangleF]::new($padding, $padding, $circleSize, $circleSize)
-    $circleBrush = [System.Drawing.SolidBrush]::new(
-        [System.Drawing.ColorTranslator]::FromHtml("#FFF9EC")
-    )
-    $graphics.FillEllipse($circleBrush, $circleBounds)
+    # Match the site's .brand-mark: navy rounded tile, yellow Q, slight rotation.
+    $tileSize = if ($Maskable) { $Size * 0.56 } else { $Size * 0.68 }
+    $tileLeft = ($Size - $tileSize) / 2
+    $tileTop = ($Size - $tileSize) / 2
+    $tileRadius = $tileSize * 0.28
+    $tileBounds = [System.Drawing.RectangleF]::new($tileLeft, $tileTop, $tileSize, $tileSize)
+    $tilePath = [System.Drawing.Drawing2D.GraphicsPath]::new()
+    $diameter = $tileRadius * 2
+    $tilePath.AddArc($tileBounds.Left, $tileBounds.Top, $diameter, $diameter, 180, 90)
+    $tilePath.AddArc($tileBounds.Right - $diameter, $tileBounds.Top, $diameter, $diameter, 270, 90)
+    $tilePath.AddArc($tileBounds.Right - $diameter, $tileBounds.Bottom - $diameter, $diameter, $diameter, 0, 90)
+    $tilePath.AddArc($tileBounds.Left, $tileBounds.Bottom - $diameter, $diameter, $diameter, 90, 90)
+    $tilePath.CloseFigure()
 
-    $fontSize = if ($Maskable) { $Size * 0.39 } else { $Size * 0.48 }
+    $graphics.TranslateTransform($Size / 2, $Size / 2)
+    $graphics.RotateTransform(-8)
+    $graphics.TranslateTransform(-$Size / 2, -$Size / 2)
+    $tileBrush = [System.Drawing.SolidBrush]::new(
+        [System.Drawing.ColorTranslator]::FromHtml("#121936")
+    )
+    $graphics.FillPath($tileBrush, $tilePath)
+
+    $fontSize = if ($Maskable) { $Size * 0.36 } else { $Size * 0.44 }
     $font = [System.Drawing.Font]::new(
         "Arial",
         $fontSize,
@@ -37,19 +48,20 @@ function New-QuesterIcon {
         [System.Drawing.GraphicsUnit]::Pixel
     )
     $letterBrush = [System.Drawing.SolidBrush]::new(
-        [System.Drawing.ColorTranslator]::FromHtml("#6757D9")
+        [System.Drawing.ColorTranslator]::FromHtml("#FFD84D")
     )
     $format = [System.Drawing.StringFormat]::new()
     $format.Alignment = [System.Drawing.StringAlignment]::Center
     $format.LineAlignment = [System.Drawing.StringAlignment]::Center
-    $graphics.DrawString("Q", $font, $letterBrush, $circleBounds, $format)
+    $graphics.DrawString("Q", $font, $letterBrush, $tileBounds, $format)
 
     $bitmap.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
 
     $format.Dispose()
     $letterBrush.Dispose()
     $font.Dispose()
-    $circleBrush.Dispose()
+    $tileBrush.Dispose()
+    $tilePath.Dispose()
     $background.Dispose()
     $graphics.Dispose()
     $bitmap.Dispose()

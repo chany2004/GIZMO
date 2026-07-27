@@ -262,12 +262,21 @@ async function loadPeopleHome(){
       const card=document.createElement('article');
       card.className='people-home-card';
       card.dataset.userId=p.id;
+      card.tabIndex=0;
+      card.setAttribute('role','link');
+      card.setAttribute('aria-label',`View ${p.name}'s profile`);
       card.innerHTML=`${avatarThumb(p.photo,p.name)}<h3>${p.name}</h3><p>Quester trivia player</p><button type="button" class="${isFollowing?'following':''}">${isFollowing?'Following':'Follow'}</button>`;
-      if(me){card.querySelector('button').onclick=async()=>{try{await profileApi('follow',{id:me,target:p.id});loadPeopleHome()}catch(e){toast(e.message)}}}
-      else card.querySelector('button').onclick=()=>openAuth('login');
+      const openPlayer=()=>{window.location.href=`player.html?id=${encodeURIComponent(p.id)}`};
+      card.addEventListener('click',event=>{if(!event.target.closest('button'))openPlayer()});
+      card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openPlayer()}});
+      if(me){card.querySelector('button').onclick=async event=>{event.stopPropagation();try{await profileApi('follow',{id:me,target:p.id});loadPeopleHome()}catch(e){toast(e.message)}}}
+      else card.querySelector('button').onclick=event=>{event.stopPropagation();openAuth('login')};
       peopleHome.append(card);
     }
-  }catch{peopleHome.innerHTML='<p>Sign in to meet Quester players.</p>'}
+  }catch(error){
+    console.warn('Could not load community profiles:',error);
+    peopleHome.innerHTML='<p>Players are temporarily unavailable. Please try again shortly.</p>';
+  }
 }
 if(peopleHome){loadPeopleHome();setInterval(loadPeopleHome,8000)}
 if(state.user?.id)setInterval(()=>authApi('me',{id:state.user.id}).then(d=>saveUser(d.user)).catch(()=>{}),8000)

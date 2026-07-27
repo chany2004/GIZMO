@@ -48,9 +48,11 @@ if ($action === 'register') {
 }
 
 if ($action === 'list') {
+    // Keep the public player directory usable on databases that predate the
+    // optional social-follow table. Follow counts are loaded on the full
+    // profile page instead of making this entire list depend on that table.
     $stmt = $db->query(
-        'SELECT u.id, u.name, u.photo, u.updated_at,
-                (SELECT COUNT(*) FROM user_follows f WHERE f.following_id = u.id) AS followers
+        'SELECT u.id, u.name, u.photo
          FROM users u ORDER BY u.total_score DESC, u.name LIMIT 50'
     );
     $profiles = [];
@@ -58,8 +60,8 @@ if ($action === 'list') {
         $profiles[] = [
             'id'        => $row['id'],
             'name'      => $row['name'],
-            'photo'     => photo_public_url($row['photo'] ?? '', $row['updated_at'] ?? null),
-            'followers' => (int) $row['followers'],
+            'photo'     => photo_public_url($row['photo'] ?? '', null),
+            'followers' => 0,
         ];
     }
     json_reply(['profiles' => $profiles]);
@@ -72,17 +74,25 @@ if ($action === 'get') {
         json_reply(['error' => 'Profile not found.'], 404);
     }
 
-    $followers = $db->prepare('SELECT COUNT(*) FROM user_follows WHERE following_id = ?');
-    $followers->execute([$id]);
-    $following = $db->prepare('SELECT COUNT(*) FROM user_follows WHERE follower_id = ?');
-    $following->execute([$id]);
+    $followerCount = 0;
+    $followingCount = 0;
+    try {
+        $followers = $db->prepare('SELECT COUNT(*) FROM user_follows WHERE following_id = ?');
+        $followers->execute([$id]);
+        $followerCount = (int) $followers->fetchColumn();
+        $following = $db->prepare('SELECT COUNT(*) FROM user_follows WHERE follower_id = ?');
+        $following->execute([$id]);
+        $followingCount = (int) $following->fetchColumn();
+    } catch (Throwable $e) {
+        // Profiles still work while an older database waits for social-table migration.
+    }
 
     json_reply(['profile' => [
         'id'        => $user['id'],
         'name'      => $user['name'],
         'photo'     => $user['photo'],
-        'followers' => (int) $followers->fetchColumn(),
-        'following' => (int) $following->fetchColumn(),
+        'followers' => $followerCount,
+        'following' => $followingCount,
     ]]);
 }
 
