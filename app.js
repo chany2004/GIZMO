@@ -48,11 +48,9 @@ const profileApi = (action, body = {}) => {
 };
 function toast(message){const t=$('#toast');t.textContent=message;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),3200)}function closeModal(id){if(id==='authModal'&&document.body.classList.contains('auth-required'))return;$(`#${id}`).classList.add('hidden')}
 function openAuth(mode='login'){
-  state.mode=mode;
-  $('#authTitle').textContent=mode==='login'?'Play with your brain on.':'Your next streak starts now.';
-  $('#authSubtitle').textContent=mode==='login'?'Log in to save your scores and keep your streak.':'Create a free account and make every game count.';
-  $('#authSubmit').innerHTML=`${mode==='login'?'Log in':'Create account'} <span>→</span>`;
-  $('#switchCopy').innerHTML=mode==='login'?'New to Quester? <button type="button" data-switch-auth="signup">Create an account</button>':'Already playing? <button type="button" data-switch-auth="login">Log in</button>';
+  state.mode='login';
+  $('#authTitle').textContent='Play with your brain on.';
+  $('#authSubtitle').textContent='Sign in with Google to save your progress, or play as a guest.';
   $('#formNote').textContent='';
   authModal.classList.remove('hidden');
   setupGoogleSignIn();
@@ -77,15 +75,14 @@ function saveUser(user){
     if(next&&!/^index\.html(?:[?#]|$)/i.test(next))location.href=next;
   }
 }
-function renderUser(){const guest=$('#guestActions'),profile=$('#profileButton');if(!state.user?.id&&!state.user?.guest){guest?.classList.remove('hidden');profile?.classList.add('hidden');return}guest?.classList.add('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.guest?'G':state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=state.user.guest?'Guest mode — create an account to save online':`${state.user.name}'s player dashboard`;profile.classList.remove('hidden')}
+function renderUser(){const guest=$('#guestActions'),profile=$('#profileButton');if(!state.user?.id&&!state.user?.guest){guest?.classList.remove('hidden');profile?.classList.add('hidden');return}guest?.classList.add('hidden');const photo=state.user.photo;if(photo){profile.classList.add('has-photo');profile.textContent='';profile.style.backgroundImage=`url('${photo}')`;profile.style.backgroundSize='cover';profile.style.backgroundPosition='center'}else{profile.classList.remove('has-photo');profile.style.backgroundImage='';profile.textContent=state.user.guest?'G':state.user.name?.charAt(0).toUpperCase()||'G'}profile.title=state.user.guest?'Guest mode — sign in with Google to save online':`${state.user.name}'s player dashboard`;profile.classList.remove('hidden')}
 function avatarThumb(photo,name){return photo?`<span class="player-photo" style="background-image:url('${photo}')"></span>`:`<b>${name.charAt(0).toUpperCase()}</b>`}
 async function login(user){saveUser(user);closeModal('authModal');toast(`Welcome${user.name?`, ${user.name}`:''}! Your streak starts today. ✨`)}
 function goToProfile(event){event?.preventDefault();if(!state.user?.id){openAuth('login');toast('Log in to view your profile.');return}window.location.href='dashboard.html'}
 async function hydrateUser(){if(!state.user)return renderUser();if(state.user.guest)return renderUser();if(!state.user.id){localStorage.removeItem('gizmoUser');state.user=null;renderUser();requireLogin();return}try{const d=await authApi('me',{id:state.user.id});saveUser(d.user)}catch{localStorage.removeItem('gizmoUser');state.user=null;renderUser();requireLogin()}}
 function requireLogin(){if(state.user?.id||state.user?.guest)return;document.body.classList.add('auth-required');openAuth('login')}
 document.addEventListener('click',event=>{const auth=event.target.closest('[data-open-auth]');if(auth){event.preventDefault();openAuth(auth.dataset.openAuth)}const sw=event.target.closest('[data-switch-auth]');if(sw){event.preventDefault();openAuth(sw.dataset.switchAuth)}const close=event.target.closest('[data-close]');if(close)closeModal(close.dataset.close);const game=event.target.closest('[data-game]');if(game)startGame(game.dataset.game)});const howButton=$('#showHow');if(howButton)howButton.addEventListener('click',()=>toast('Create a room, invite friends, then climb the leaderboard.'));$('#profileButton')?.addEventListener('click',goToProfile);$('#viewProfileLink')?.addEventListener('click',goToProfile);
-$('#authForm').addEventListener('submit',async event=>{event.preventDefault();const email=$('#email').value.trim(),password=$('#password').value;if(password.length<6){$('#formNote').textContent='Please use at least 6 characters for your password.';return}try{const d=await authApi(state.mode==='login'?'login':'register',{email,password,name:email.split('@')[0]});await login(d.user)}catch(e){$('#formNote').textContent=e.message}});
-$('#guestSignIn').addEventListener('click',()=>{saveUser({id:null,name:'Guest',guest:true,offline:true});closeModal('authModal');toast('Guest mode is on. Create an account anytime to save online.')});
+$('#guestSignIn').addEventListener('click',()=>{saveUser({id:null,name:'Guest',guest:true,offline:true});closeModal('authModal');toast('Guest mode is on. Sign in with Google anytime to save online.')});
 async function waitForGoogleIdentity(){
   for(let attempt=0;attempt<120;attempt++){
     if(window.google?.accounts?.id)return window.google.accounts.id;
