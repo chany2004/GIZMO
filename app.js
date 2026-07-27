@@ -95,7 +95,7 @@ function showOnboarding(user){
   $('#onboardingProfileCharacter').textContent=(username.value||'Q').charAt(0).toUpperCase();
   $('#onboardingNote').textContent='';
   document.querySelectorAll('[data-onboarding-character]').forEach(choice=>choice.classList.toggle('selected',choice.dataset.onboardingCharacter===onboardingCharacter));
-  closeModal('authModal');
+  authModal.classList.add('hidden');
   $('#onboardingModal').classList.remove('hidden');
   setTimeout(()=>username.focus(),0);
 }
@@ -143,8 +143,10 @@ $('#onboardingForm').addEventListener('submit',async event=>{
     localStorage.setItem('gizmoBattleCharacter',onboardingCharacter);
     saveUser(completedUser,false);
     onboardingUser=null;
+    authModal.classList.add('hidden');
+    document.body.classList.remove('auth-required');
     $('#onboardingModal').classList.add('hidden');
-    if(location.search||location.hash)history.replaceState({},'', 'index.html');
+    history.replaceState({},'', 'index.html');
     toast(`Welcome, ${username}! Your player is ready. ✨`);
     if(peopleHome)loadPeopleHome();
   }catch(error){
