@@ -623,6 +623,11 @@ function renderResultXp(totalXp){
 async function animateGameXp(earned){
   var panel=$('#gameExpPanel'),earnedEl=$('#earnedXp'),levelUp=$('#levelUpMessage');
   panel.classList.remove('hidden');
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      panel.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});
+    });
+  });
   earnedEl.textContent='+0 XP';
 
   var oldTotal=Math.max(0,Number(user?.stats?.totalScore)||0);
@@ -673,6 +678,7 @@ function finish(){
   if(finishSequenceStarted)return;
   finishSequenceStarted=true;
   phase='finished';
+  $('#quizScreen').classList.add('is-finished');
   clearInterval(poll);clearInterval(clock);poll=null;
   $('#questionCount').textContent='GAME COMPLETE';
   $('#progressBar').style.width='100%';

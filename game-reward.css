@@ -109,10 +109,18 @@
 }
 
 @media (max-width: 640px) {
-  .game-exp-panel { gap: 7px 12px; padding: 16px 15px 15px; border-left-width: 5px; }
+  .duel-shell.is-finished .battle-hud { display: none; }
+  .duel-shell.is-finished .game-top { margin-bottom: 8px; }
+  .duel-shell.is-finished .progress-track { margin: 8px 0 10px; }
+  .duel-shell.is-finished #questionCount { margin: 8px 0; }
+  .duel-shell.is-finished #gameTitle { margin: 8px auto 5px; font-size: 29px; }
+  .duel-shell.is-finished #gameInstruction { margin-bottom: 9px; font-size: 13px; }
+  .duel-shell.is-finished #answerNote { min-height: 0 !important; margin: 8px 0 !important; }
+  .game-exp-panel { width: 100%; gap: 7px 12px; margin: 10px auto 4px; padding: 15px 13px 14px; border-left-width: 5px; }
   .game-exp-panel::after { right: 14px; font-size: 50px; }
   .exp-level-row > strong { width: 47px; height: 47px; font-size: 25px; }
   .exp-reward strong { font-size: 17px; }
+  .result-actions { margin-top: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .game-exp-panel, .game-exp-panel * { animation: none !important; transition: none !important; }
