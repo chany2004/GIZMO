@@ -1,6 +1,7 @@
 const $=s=>document.querySelector(s);
 let category='world',roomCode='',playerId='',room=null,currentRound=0,answered=false,answerTransitioning=false,pendingAnswerState=null,questionStartedAt=0,poll,clock,phase='setup',usingLocalQuestions=false,gameStarting=false;
 let categories={},questions=[],questionCache={};
+let onlineCategories=[];
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
 const launchParams=new URLSearchParams(location.search);
@@ -151,8 +152,19 @@ async function loadCategories(){
       new Promise(function(_,reject){setTimeout(function(){reject(new Error('Category request timed out.'))},2500)})
     ]);
     var list=d.categories?.length?d.categories:fallback;
+    onlineCategories=list;
     renderCategorySelect(list);
   }catch(e){}
+}
+
+async function syncOnlineCategory(){
+  var d=await withTimeout(quizApi('categories'),10000,'Could not connect to the room server.');
+  if(!Array.isArray(d.categories)||!d.categories.length)throw new Error('No online game categories are available.');
+  onlineCategories=d.categories;
+  if(!onlineCategories.some(function(item){return item.slug===category})){
+    category=onlineCategories[0].slug;
+  }
+  renderCategorySelect(onlineCategories);
 }
 
 function fallbackQuestions(){
@@ -209,13 +221,14 @@ async function createRoom(){
   var progressTimer=setTimeout(function(){setRoomCreating(true,'Almost there — preparing your lobby')},1400);
   showStartError('');
   try{
-    // A slow Vercel/TiDB function must never trap the button in a permanent
-    // loading state. After a short wait, open a playable local room instead.
+    // A shared Room ID must always come from the online server. Local-only
+    // fallback codes look valid but can never be joined from another device.
+    await syncOnlineCategory();
     var roomCategory=customStudy?'custom_study':category;
     var d=await withTimeout(
       api('create',{name:playerName(),category:roomCategory,customQuestions:customStudyQuestions(),studyTitle:customStudy?.title||''}),
-      12000,
-      'Online room took too long to start.'
+      25000,
+      'The online room took too long to start. Please try again.'
     );
     roomCode=d.roomCode;
     playerId=d.playerId;
@@ -225,13 +238,7 @@ async function createRoom(){
     // Show the Room Created lobby on every device before a host starts.
     // This gives phone players a chance to share or copy the Room ID too.
     enterLobby(d.state);
-  }catch(e){
-    if(window.GIZMO?.isVercel&&!customStudy){
-      startOfflineRoom('Quick-play room created because the online room is taking too long.');
-      return;
-    }
-    showStartError(e.message)
-  }
+  }catch(e){showStartError((e.message||'Could not create the online room.')+' No Room ID was created—please try again.')}
   finally{
     clearTimeout(progressTimer);
     setRoomCreating(false);
