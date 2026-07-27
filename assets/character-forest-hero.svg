@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" shape-rendering="crispEdges">
+  <style>
+    .hero{transform-origin:64px 108px;animation:heroIdle 2.2s ease-in-out infinite}
+    .hero-eye{animation:heroBlink 3.8s steps(1) infinite}
+    .cloak{transform-origin:64px 92px;animation:cloakSway 2.2s ease-in-out infinite}
+    @keyframes heroIdle{25%{transform:translateY(-2px) rotate(-1deg)}75%{transform:translateY(-1px) rotate(1deg)}}
+    @keyframes heroBlink{0%,54%,59%,100%{opacity:1}56%,57%{opacity:.05}}
+    @keyframes cloakSway{50%{transform:scaleX(1.035)}}
+    @media(prefers-reduced-motion:reduce){.hero,.hero-eye,.cloak{animation:none}}
+  </style>
+  <rect width="128" height="128" fill="#fff"/>
+  <g class="hero">
+  <path fill="#3a281e" d="M44 14h34v7h18v7h13v31h-7v16H92v31H79V95H49v11H35V76H24V62H18V40h8V27h12V18h6z"/>
+  <path fill="#83573b" d="M32 30h10V22h30v8h22v8h9v26H91v9H37v-8H25V43h7z"/>
+  <path fill="#a87048" d="M38 34h10v-8h23v11h12v-7h12v28H84v8H35V55H28V42h10z"/>
+  <path fill="#d79b72" d="M39 58h50v26H79v10H50V85H39z"/>
+  <rect class="hero-eye" x="48" y="68" width="6" height="8" fill="#348a52"/>
+  <rect class="hero-eye" x="76" y="68" width="6" height="8" fill="#348a52"/>
+  <rect x="62" y="80" width="8" height="4" fill="#a84e43"/>
+  <path class="cloak" fill="#4d713a" d="M32 82h18v8h30v-8h18v34H84v-15H48v15H32z"/>
+  <path fill="#3c5d32" d="M25 86h13v34H25zm65 0h13v34H90z"/>
+  <path fill="#26341f" d="M43 101h42v11H76v8H52v-8h-9z"/>
+  </g>
+</svg>

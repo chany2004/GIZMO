@@ -5,8 +5,24 @@ if (!user?.id) {
 }
 let currentUserId=user?.id||'';
 
-async function authApi(action,body={}){const r=await fetch('auth.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})});const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Request failed');return d}
-async function profileApi(action,body={}){const r=await fetch('profiles.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})});const d=await r.json();if(!r.ok||d.error)throw new Error(d.error||'Request failed');return d}
+async function directApi(endpoint,action,body={}){
+  const r=await fetch(`${endpoint}.php`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...body})});
+  const text=await r.text();
+  let d;
+  try{d=JSON.parse(text)}catch{throw new Error('The profile server returned an invalid response.')}
+  if(!r.ok||d.error)throw new Error(d.error||'Request failed');
+  return d;
+}
+function authApi(action,body={}){
+  return window.GIZMO?.authApi
+    ?window.GIZMO.authApi(action,body)
+    :directApi('auth',action,body);
+}
+function profileApi(action,body={}){
+  return window.GIZMO?.profileApi
+    ?window.GIZMO.profileApi(action,body)
+    :directApi('profiles',action,body);
+}
 
 function photoUrl(photo){
   if(!photo)return'';
@@ -133,8 +149,10 @@ async function init(){
     localStorage.setItem('gizmoUser',JSON.stringify(me.user));
     render(me.user,social);
   }catch(e){
-    document.querySelector('#welcomeName').textContent='Could not load profile';
-    document.querySelector('.dashboard').insertAdjacentHTML('beforeend',`<p class="form-note center">${e.message}. <a href="index.html">Go home and log in again</a></p>`);
+    // Keep the profile useful during a temporary API/cold-start failure.
+    // Google identity details already stored locally are safe to render here.
+    render(user,{following:[],followers:[]});
+    showPhotoToast('Live profile stats are temporarily unavailable.');
   }
 }
 

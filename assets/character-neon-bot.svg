@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" shape-rendering="crispEdges">
+  <style>
+    .bot{transform-origin:64px 70px;animation:botHover 1.9s ease-in-out infinite}
+    .eye{animation:botBlink 3.2s steps(1) infinite}
+    .neon{animation:neonPulse 1.4s ease-in-out infinite}
+    @keyframes botHover{50%{transform:translateY(-4px)}}
+    @keyframes botBlink{0%,43%,49%,100%{opacity:1}45%,47%{opacity:.05}}
+    @keyframes neonPulse{50%{opacity:.45}}
+    @media(prefers-reduced-motion:reduce){.bot,.eye,.neon{animation:none}}
+  </style>
+  <rect width="128" height="128" fill="#090c0a"/>
+  <g class="bot">
+  <path fill="#555951" d="M38 30h12V20h34v6h12v8h10v12h8v38h-8v14H94v10H34V98H22V82H18V44h8V34h12z"/>
+  <path fill="#252925" d="M34 44h12V34h42v6h12v12h8v28H96v14H82v8H44v-8H30V80H24V52h10z"/>
+  <path fill="#050706" d="M44 48h48v8h10v24H92v10H42V80H32V58h12z"/>
+  <rect class="eye" x="48" y="62" width="7" height="10" fill="#00ef19"/>
+  <rect class="eye" x="87" y="62" width="7" height="10" fill="#00ef19"/>
+  <rect x="55" y="82" width="34" height="5" fill="#51564e"/>
+  <path class="neon" fill="#00e51a" d="M72 20h7v8h7v8h7v10h-7V36h-7v-8h-7zM34 88h8v7h-8v8h-7V91h7zm8-8h10v6H42z"/>
+  <path fill="#8d9b81" d="M52 102h42v18H44v-10h8z"/>
+  <rect x="60" y="102" width="10" height="18" fill="#b0bba3"/>
+  </g>
+</svg>

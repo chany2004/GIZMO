@@ -137,6 +137,13 @@ CREATE TABLE IF NOT EXISTS `room_players` (
   CONSTRAINT `fk_room_players_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `room_player_characters` (
+  `player_id`      VARCHAR(32) NOT NULL,
+  `character_key` VARCHAR(24) NOT NULL DEFAULT 'profile',
+  PRIMARY KEY (`player_id`),
+  CONSTRAINT `fk_character_player` FOREIGN KEY (`player_id`) REFERENCES `room_players` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `room_answers` (
   `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `room_player_id` VARCHAR(32) NOT NULL,

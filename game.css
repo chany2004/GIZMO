@@ -800,6 +800,211 @@
 }
 .attack-player:hover:not(:disabled){background:#ffe2e7!important;transform:none!important}
 .attack-player:disabled{opacity:.55;cursor:wait}
+
+.character-picker{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  width:min(100%,430px);
+  margin:16px auto 18px;
+  padding:0;
+  border:0;
+}
+.character-picker legend{
+  grid-column:1/-1;
+  width:100%;
+  margin-bottom:7px;
+  color:#4b5571;
+  font-size:11px;
+  font-weight:800;
+  text-align:center;
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+.character-choice{
+  display:grid!important;
+  justify-items:center;
+  gap:6px;
+  min-width:0;
+  padding:8px 6px!important;
+  border:2px solid #e1deeb!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  color:#303858!important;
+  box-shadow:none!important;
+  cursor:pointer;
+}
+.character-choice img,.character-profile{
+  display:grid;
+  width:54px;
+  height:54px;
+  border-radius:12px;
+  object-fit:cover;
+  image-rendering:pixelated;
+  place-items:center;
+  background:#9880eb;
+  color:#fff;
+  font:800 22px "Baloo 2",sans-serif;
+  background-position:center;
+  background-size:cover;
+}
+.character-choice b{max-width:100%;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.character-choice.selected{border-color:#6959dc!important;background:#f1eeff!important;box-shadow:0 0 0 3px #6959dc1c!important}
+.character-choice{position:relative;overflow:hidden;transition:border-color .18s ease,background .18s ease,transform .18s ease!important}
+.character-choice:before{position:absolute;inset:auto 18% -16px;height:20px;border-radius:50%;background:#5146a91c;filter:blur(6px);content:"";transition:.2s}
+.character-choice:hover{transform:translateY(-3px)!important}
+.character-choice:active{transform:translateY(0) scale(.97)!important}
+.character-choice.selected:after{position:absolute;top:7px;right:7px;display:grid;width:18px;height:18px;place-items:center;border-radius:50%;background:#6555db;color:#fff;content:"✓";font-size:10px;font-weight:900;box-shadow:0 3px 8px #4f43b94d}
+.character-choice.selected img,.character-choice.selected .character-profile{animation:selectedCharacterFloat 1.65s ease-in-out infinite}
+.character-choice[data-character="neon-bot"].selected img{animation:neonCharacterFloat 1.5s ease-in-out infinite}
+.character-choice[data-character="forest-hero"].selected img{animation:heroCharacterIdle 2s ease-in-out infinite}
+.character-profile{animation:profileCharacterBreathe 2.4s ease-in-out infinite}
+@keyframes selectedCharacterFloat{50%{transform:translateY(-4px);box-shadow:0 8px 16px #463a9f29}}
+@keyframes neonCharacterFloat{50%{transform:translateY(-5px) scale(1.04);filter:drop-shadow(0 0 7px #00df38)}}
+@keyframes heroCharacterIdle{25%{transform:translateY(-3px) rotate(-1.5deg)}75%{transform:translateY(-2px) rotate(1.5deg)}}
+@keyframes profileCharacterBreathe{50%{transform:scale(1.035)}}
+
+.duel-shell .live-scoreboard{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:14px;
+  align-items:center;
+  margin:12px 0 18px;
+  padding:12px 14px;
+  border:1px solid #ded9f4;
+  border-radius:15px;
+  background:linear-gradient(135deg,#faf9ff,#f2efff);
+}
+.duel-shell .live-scoreboard.hidden{display:none!important}
+.live-scoreboard .scoreboard-heading{min-width:105px;text-align:left}
+.live-scoreboard .scoreboard-heading .eyebrow{justify-content:flex-start;margin:0 0 3px;font-size:7px}
+.live-scoreboard .scoreboard-heading h2{margin:0;font-size:18px;white-space:nowrap}
+.live-scoreboard ol{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px}
+.live-scoreboard li{min-height:52px;margin:0;padding:8px 10px;border-radius:11px;background:#fff}
+.live-scoreboard li:before{width:24px;height:24px;font-size:10px}
+.live-scoreboard .player-avatar{width:34px!important;height:34px!important}
+.live-scoreboard li strong{min-width:0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-scoreboard li>span:not(.player-avatar){font-size:11px}
+@media(max-width:430px){
+  .character-picker{gap:6px;margin:13px auto 15px}
+  .character-choice{padding:7px 3px!important}
+  .character-choice img,.character-profile{width:46px;height:46px}
+  .character-choice b{font-size:9px}
+  .duel-shell .live-scoreboard{grid-template-columns:1fr;gap:8px;padding:10px;margin:9px 0 15px}
+  .live-scoreboard .scoreboard-heading{display:flex;align-items:center;justify-content:space-between}
+  .live-scoreboard .scoreboard-heading .eyebrow{margin:0}
+  .live-scoreboard .scoreboard-heading h2{font-size:16px}
+  .live-scoreboard ol{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  .character-choice,.character-choice img,.character-profile{animation:none!important;transition:none!important}
+}
+
+/* Unified in-game ranking HUD */
+.duel-shell .battle-hud{
+  margin:12px 0 19px;
+  padding:0;
+  overflow:hidden;
+  border:1px solid #d9d3f3;
+  border-radius:17px;
+  background:linear-gradient(145deg,#fbfaff 0%,#f2efff 100%);
+  box-shadow:0 8px 22px #352b7910;
+}
+.duel-shell .battle-hud .room-status{
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  gap:8px;
+  align-items:center;
+  margin:0;
+  padding:10px 14px;
+  border:0;
+  border-bottom:1px solid #e2def5;
+  border-radius:0;
+  background:#ffffffb8;
+  box-shadow:none;
+}
+.battle-hud .room-status strong{
+  width:max-content;
+  padding:5px 9px;
+  border-radius:8px;
+  background:#6254d9;
+  color:#fff;
+  font-size:10px;
+  letter-spacing:.5px;
+}
+.battle-hud .room-status span{
+  padding:5px 9px;
+  border-radius:999px;
+  background:#f0edff;
+  color:#51479d;
+  font-size:10px;
+  font-weight:800;
+}
+.duel-shell .live-scoreboard{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:10px;
+  align-items:stretch;
+  margin:0;
+  padding:13px 14px 14px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.live-scoreboard .scoreboard-heading{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  width:100%;
+  min-width:0;
+  text-align:left;
+}
+.scoreboard-trophy{
+  display:grid;
+  flex:0 0 36px;
+  width:36px;
+  height:36px;
+  place-items:center;
+  border-radius:11px;
+  background:linear-gradient(145deg,#ffdf63,#f7ba27);
+  box-shadow:0 4px 0 #d99a16;
+  font-size:18px;
+}
+.scoreboard-heading>span:last-child{display:flex;align-items:center;gap:8px;min-width:0}
+.scoreboard-heading small{color:#6a6490;font-size:7px;font-style:normal;font-weight:900;letter-spacing:1.2px;white-space:nowrap}
+.scoreboard-heading small i{display:inline-block;width:6px;height:6px;margin-right:4px;border-radius:50%;background:#46cf83;box-shadow:0 0 0 3px #46cf8320;animation:liveScorePulse 1.5s ease-in-out infinite}
+.scoreboard-heading strong{color:#211b50;font:800 15px "Baloo 2",sans-serif;line-height:1.05;white-space:normal}
+@keyframes liveScorePulse{50%{opacity:.35;transform:scale(.75)}}
+.live-scoreboard ol{display:grid;width:100%;min-width:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));gap:7px}
+.live-scoreboard li{
+  position:relative;
+  min-width:0;
+  min-height:52px;
+  margin:0;
+  padding:7px 9px;
+  border:1px solid #e1def0;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 3px 9px #332a7310;
+}
+.live-scoreboard li:first-child{border-color:#f2d27c;background:linear-gradient(135deg,#fffdf5,#fff)}
+.live-scoreboard li:before{width:25px;height:25px}
+.live-scoreboard .player-avatar{flex:0 0 34px;width:34px!important;height:34px!important;border:2px solid #fff;box-shadow:0 2px 7px #31287828}
+.live-scoreboard li strong{flex:1;min-width:55px;font-size:10px}
+.live-scoreboard li>span:not(.player-avatar){margin-left:auto;font-size:11px;font-weight:900;white-space:nowrap}
+.live-scoreboard .attack-player{padding:6px 7px!important;font-size:8px!important}
+@media(max-width:640px){
+  .duel-shell .battle-hud{margin:8px 0 15px;border-radius:14px}
+  .duel-shell .battle-hud .room-status{grid-template-columns:1fr auto auto;padding:8px 9px}
+  .battle-hud .room-status strong,.battle-hud .room-status span{padding:4px 7px;font-size:8px}
+  .duel-shell .live-scoreboard{grid-template-columns:minmax(0,1fr);gap:9px;padding:10px}
+  .live-scoreboard .scoreboard-heading{justify-content:flex-start}
+  .scoreboard-trophy{width:31px;height:31px;flex-basis:31px;border-radius:9px;font-size:15px}
+  .scoreboard-heading>span:last-child{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .scoreboard-heading strong{font-size:14px}
+  .live-scoreboard ol{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+}
+@media(prefers-reduced-motion:reduce){.scoreboard-heading small i{animation:none}}
 .duel-shell .answer,
 .duel-shell .answer:hover,
 .duel-shell .answer:active,

@@ -15,7 +15,11 @@ function multiplayer_ensure_schema(PDO $db): void
     try {
         // Avoid running DDL during every serverless request. A zero-row query
         // is enough to verify that the custom-room storage already exists.
-        $db->query('SELECT room_id, title, questions_json FROM room_custom_quizzes LIMIT 0');
+        $db->query(
+            'SELECT cq.room_id, cq.title, cq.questions_json, rpc.character_key
+             FROM room_custom_quizzes cq
+             LEFT JOIN room_player_characters rpc ON 1 = 0 LIMIT 0'
+        );
         return;
     } catch (PDOException $e) {
         if (!preg_match('/42S02|1146|doesn.t exist|unknown table/i', $e->getMessage())) {
@@ -32,6 +36,13 @@ function multiplayer_ensure_schema(PDO $db): void
             title VARCHAR(120) NOT NULL,
             questions_json LONGTEXT NOT NULL,
             PRIMARY KEY (room_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS room_player_characters (
+            player_id VARCHAR(32) NOT NULL,
+            character_key VARCHAR(24) NOT NULL DEFAULT \'profile\',
+            PRIMARY KEY (player_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
 }
@@ -52,6 +63,14 @@ function multiplayer_clip(string $value, int $length): string
     return function_exists('mb_substr')
         ? mb_substr($value, 0, $length, 'UTF-8')
         : substr($value, 0, $length);
+}
+
+function multiplayer_character($candidate): string
+{
+    $character = strtolower(trim((string) $candidate));
+    return in_array($character, ['profile', 'neon-bot', 'forest-hero'], true)
+        ? $character
+        : 'profile';
 }
 
 multiplayer_ensure_schema($db);
@@ -91,8 +110,9 @@ function load_players(PDO $db, int $roomId): array
     $stmt = $db->prepare(
         'SELECT rp.id, rp.user_id, rp.name, rp.score, rp.correct, rp.streak,
                 rp.best_streak AS bestStreak, rp.answered_round AS answeredRound, rp.round,
-                u.photo, u.updated_at
+                rpc.character_key, u.photo, u.updated_at
          FROM room_players rp
+         LEFT JOIN room_player_characters rpc ON rpc.player_id = rp.id
          LEFT JOIN users u ON u.id = rp.user_id
          WHERE rp.room_id = ? ORDER BY rp.score DESC, rp.correct DESC'
     );
@@ -103,6 +123,7 @@ function load_players(PDO $db, int $roomId): array
             'id'             => $p['id'],
             'userId'         => $p['user_id'],
             'name'           => $p['name'],
+            'character'      => $p['character_key'] ?: 'profile',
             'photo'          => photo_public_url($p['photo'] ?? '', $p['updated_at'] ?? null),
             'score'          => (int) $p['score'],
             'correct'        => (int) $p['correct'],
@@ -217,6 +238,7 @@ if ($action === 'create') {
     }
     $catId = (int) $row['id'];
     $name = clean_name($data['name'] ?? '');
+    $character = multiplayer_character($data['character'] ?? 'profile');
     $userId = multiplayer_existing_user_id($db, $data['userId'] ?? null);
 
     do {
@@ -274,6 +296,9 @@ if ($action === 'create') {
         $db->prepare(
             'INSERT INTO room_players (id, room_id, user_id, name) VALUES (?, ?, ?, ?)'
         )->execute([$playerId, $roomId, $userId, $name]);
+        $db->prepare(
+            'INSERT INTO room_player_characters (player_id, character_key) VALUES (?, ?)'
+        )->execute([$playerId, $character]);
         $db->commit();
     } catch (Throwable $e) {
         if ($db->inTransaction()) {
@@ -306,11 +331,15 @@ if ($action === 'join') {
 
     $playerId = bin2hex(random_bytes(12));
     $name = clean_name($data['name'] ?? '');
+    $character = multiplayer_character($data['character'] ?? 'profile');
     $userId = multiplayer_existing_user_id($db, $data['userId'] ?? null);
 
     $db->prepare(
         'INSERT INTO room_players (id, room_id, user_id, name) VALUES (?, ?, ?, ?)'
     )->execute([$playerId, (int) $roomRow['id'], $userId, $name]);
+    $db->prepare(
+        'INSERT INTO room_player_characters (player_id, character_key) VALUES (?, ?)'
+    )->execute([$playerId, $character]);
 
     json_reply([
         'roomCode' => $code,

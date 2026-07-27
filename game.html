@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="trivia.css?v=3" />
-    <link rel="stylesheet" href="game.css?v=13" />
+    <link rel="stylesheet" href="game.css?v=18" />
     <link rel="stylesheet" href="start-polish.css?v=4" />
     <link rel="stylesheet" href="profile.css" />
     <link rel="stylesheet" href="lobby.css?v=2" />
@@ -42,6 +42,12 @@
         <label class="player-name">Your player name
           <input id="playerName" maxlength="24" placeholder="e.g. QuesterPlayer" />
         </label>
+        <fieldset class="character-picker">
+          <legend>Choose your battle character</legend>
+          <button type="button" class="character-choice selected" data-character="profile"><span class="character-profile" id="characterProfile">G</span><b>My Profile</b></button>
+          <button type="button" class="character-choice" data-character="neon-bot"><img src="assets/character-neon-bot.svg?v=2" alt="" /><b>Neon Bot</b></button>
+          <button type="button" class="character-choice" data-character="forest-hero"><img src="assets/character-forest-hero.svg?v=2" alt="" /><b>Forest Hero</b></button>
+        </fieldset>
         <div class="setup-group">
           <label class="category-label" for="categorySelect">Choose a category</label>
           <select id="categorySelect" class="category-select" aria-label="Quiz categories">
@@ -110,11 +116,19 @@
           <span id="gameKind">MULTIPLAYER TRIVIA</span>
           <strong><span class="timer">⏱ <b id="timer">20</b>s</span> &nbsp; Score: <b id="score">0</b></strong>
         </div>
-        <section class="room-status">
-          <strong id="roomLabel">Room</strong>
-          <span id="playerCount">1 player</span>
-          <span id="streakBadge">🔥 0 streak</span>
-          <button type="button" class="room-invite" id="copyRoom">Invite</button>
+        <section class="battle-hud" aria-label="Live game status">
+          <div class="room-status">
+            <strong id="roomLabel">Room</strong>
+            <span id="playerCount">1 player</span>
+            <span id="streakBadge">🔥 0 streak</span>
+          </div>
+          <section class="leaderboard live-scoreboard hidden" id="leaderboard">
+            <div class="scoreboard-heading">
+              <span class="scoreboard-trophy" aria-hidden="true">🏆</span>
+              <span><small><i></i> LIVE RANKING</small><strong>Battle scoreboard</strong></span>
+            </div>
+            <ol id="leaderboardList"></ol>
+          </section>
         </section>
         <div class="progress-track"><span id="progressBar"></span></div>
         <p class="question-count" id="questionCount">QUESTION 1 OF 15</p>
@@ -127,14 +141,9 @@
           <button class="button" type="button" id="restartGame">Play again <span>↻</span></button>
           <a class="button light-button" href="index.html">More games</a>
         </div>
-        <section class="leaderboard hidden" id="leaderboard">
-          <p class="eyebrow center"><span></span> TOP SCORES</p>
-          <h2>High-score board</h2>
-          <ol id="leaderboardList"></ol>
-        </section>
       </section>
     </main>
     <script src="js/config.js?v=3"></script>
-    <script src="game.js?v=26"></script>
+    <script src="game.js?v=28"></script>
   </body>
 </html>

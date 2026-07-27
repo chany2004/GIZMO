@@ -8,7 +8,10 @@ let lobbyRenderSignature='';
 let leaderboardRenderSignature='';
 const categoryIcons={world:'🌍',science:'🧠',fun:'🎬',history:'📜',geography:'🗺️',sports:'⚽',music:'🎵',movies:'🎥',food:'🍕',animals:'🐾',technology:'💻',math:'🔢',literature:'📚',art:'🎨',philippines:'🇵🇭'};
 const user=JSON.parse(localStorage.getItem('gizmoUser')||'null');
+const characterAssets={'neon-bot':'assets/character-neon-bot.svg?v=2','forest-hero':'assets/character-forest-hero.svg?v=2'};
+let selectedCharacter=localStorage.getItem('gizmoBattleCharacter')||'profile';
 const launchParams=new URLSearchParams(location.search);
+if(characterAssets[launchParams.get('character')])selectedCharacter=launchParams.get('character');
 let customStudy=null;
 if(launchParams.get('study')==='1'){
   try{
@@ -39,6 +42,7 @@ const screens=['startScreen','lobbyScreen','quizScreen'];
 function showScreen(id){screens.forEach(s=>$(`#${s}`)?.classList.toggle('hidden',s!==id))}
 function isHost(){return room?.hostId===playerId}
 function playerName(){return $('#playerName').value.trim()||'Player'}
+function playerAvatarUrl(player){return characterAssets[player?.character]||player?.photo||''}
 function pause(ms){return new Promise(function(resolve){setTimeout(resolve,ms)})}
 function withTimeout(task,ms,message){
   return Promise.race([
@@ -235,7 +239,7 @@ async function createRoom(){
     await syncOnlineCategory();
     var roomCategory=customStudy?'custom_study':category;
     var d=await withTimeout(
-      api('create',{name:playerName(),category:roomCategory,customQuestions:customStudyQuestions(),studyTitle:customStudy?.title||''}),
+      api('create',{name:playerName(),character:selectedCharacter,category:roomCategory,customQuestions:customStudyQuestions(),studyTitle:customStudy?.title||''}),
       25000,
       'The online room took too long to start. Please try again.'
     );
@@ -259,7 +263,7 @@ function startOfflineRoom(note){
   playerId='local-player';
   questions=offlineWorldQuestions.map(q=>({...q}));
   questionCache[category]=questions;
-  room={status:'lobby',offline:true,category:category,hostId:playerId,players:[{id:playerId,userId:user?.id||null,name:playerName(),score:0,streak:0,correct:0,round:0}]};
+  room={status:'lobby',offline:true,category:category,hostId:playerId,players:[{id:playerId,userId:user?.id||null,name:playerName(),character:selectedCharacter,score:0,streak:0,correct:0,round:0}]};
   localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
   enterLobby({room:room});
   if(note)showLobbyNote(note);
@@ -296,7 +300,7 @@ function renderLobby(state){
 
   var players=room.players;
   $('#lobbyPlayerCount').textContent=players.length+' player'+(players.length===1?'':'s')+' waiting';
-  var signature=players.map(function(p){return [p.id,p.name,p.photo||'',p.id===room.hostId].join(':')}).join('|');
+  var signature=players.map(function(p){return [p.id,p.name,p.character||'',p.photo||'',p.id===room.hostId].join(':')}).join('|');
   if(signature===lobbyRenderSignature)return;
   lobbyRenderSignature=signature;
   var list=$('#lobbyPlayerList');
@@ -306,7 +310,8 @@ function renderLobby(state){
     li.className='lobby-player-row';
     var av=document.createElement('span');
     av.className='lobby-player-avatar';
-    if(p.photo){av.style.backgroundImage="url('"+p.photo+"')";av.textContent=''}else{av.textContent=p.name.charAt(0).toUpperCase()}
+    var avatarUrl=playerAvatarUrl(p);
+    if(avatarUrl){av.style.backgroundImage="url('"+avatarUrl+"')";av.textContent=''}else{av.textContent=p.name.charAt(0).toUpperCase()}
     var meta=document.createElement('span');
     var tags=[p.name];
     if(p.id===playerId)tags.push('You');
@@ -421,7 +426,7 @@ async function joinRoom(code){
   setRoomCreating(true,'Joining room '+roomCode);
   $('#roomCreationTitle').textContent='Joining the lobby…';
   try{
-    var d=await api('join',{name:playerName()});
+    var d=await api('join',{name:playerName(),character:selectedCharacter});
     playerId=d.playerId;
     localStorage.setItem('gizmoRoomPlayer',JSON.stringify({roomCode:roomCode,playerId:playerId}));
     setRoomCreating(false);
@@ -441,7 +446,7 @@ loadFollowing();
 function rememberKnown(p){if(p.id===playerId||!user?.id)return;var key=p.userId||p.name;if(knownSaved.has(key))return;knownSaved.add(key);authApi('addKnown',{userId:user.id,knownUserId:p.userId||null,knownName:p.userId?null:p.name}).catch(function(){})}
 async function toggleFollow(player){if(!user?.id||!player.userId){$('#answerNote').textContent='Log in to follow players.';return}try{var d=await profileApi('follow',{id:user.id,target:player.userId});d.following?followingIds.add(player.userId):followingIds.delete(player.userId);showBoard(room.players)}catch(e){$('#answerNote').textContent=e.message}}
 function showBoard(players){
-  var signature=players.map(function(p){return[p.id,p.name,p.photo||'',p.score||0,p.streak||0,followingIds.has(p.userId)].join(':')}).join('|')+'|attack:'+attackRound;
+  var signature=players.map(function(p){return[p.id,p.name,p.character||'',p.photo||'',p.score||0,p.streak||0,followingIds.has(p.userId)].join(':')}).join('|')+'|attack:'+attackRound;
   if(signature===leaderboardRenderSignature)return;
   leaderboardRenderSignature=signature;
   var list=$('#leaderboardList');
@@ -451,7 +456,8 @@ function showBoard(players){
     var li=document.createElement('li');
     var av=document.createElement('span');
     av.className='player-avatar';
-    if(p.photo){av.style.backgroundImage="url('"+p.photo+"')";av.textContent=''}else{av.textContent=p.name.charAt(0).toUpperCase()}
+    var avatarUrl=playerAvatarUrl(p);
+    if(avatarUrl){av.style.backgroundImage="url('"+avatarUrl+"')";av.textContent=''}else{av.textContent=p.name.charAt(0).toUpperCase()}
     var name=document.createElement('strong'),points=document.createElement('span');
     name.textContent=p.name+(p.id===playerId?' (You)':'');
     points.textContent=p.score+' pts';
@@ -632,12 +638,27 @@ function startPolling(){
 }
 
 // Events
+function selectCharacter(character){
+  selectedCharacter=characterAssets[character]?character:'profile';
+  localStorage.setItem('gizmoBattleCharacter',selectedCharacter);
+  document.querySelectorAll('.character-choice').forEach(function(choice){
+    choice.classList.toggle('selected',choice.dataset.character===selectedCharacter);
+  });
+}
+var profileCharacter=$('#characterProfile');
+if(user?.photo){
+  profileCharacter.style.backgroundImage="url('"+user.photo+"')";
+  profileCharacter.textContent='';
+}else profileCharacter.textContent=(user?.name||'G').charAt(0).toUpperCase();
+document.querySelectorAll('.character-choice').forEach(function(choice){
+  choice.addEventListener('click',function(){selectCharacter(choice.dataset.character)});
+});
+selectCharacter(selectedCharacter);
 $('#startGame').onclick=createRoom;
 $('#beginGame').onclick=beginGame;
 $('#restartGame').onclick=function(){location.href='game.html'};
 $('#copyRoomCode').onclick=function(){copyText(roomCode,$('#lobbyNote'),'Room ID copied!')};
 $('#copyRoomLink').onclick=function(){copyText(roomInviteUrl(),$('#lobbyNote'),'Invite link copied!')};
-$('#copyRoom').onclick=function(){copyText(roomInviteUrl(),$('#answerNote'),'Invite link copied!')};
 $('#nextAnswer').onclick=function(){
   if(!answered)return;
   answerTransitioning=false;
